@@ -35,10 +35,6 @@ export class MailService implements OnModuleInit {
         }
     }
 
-    /**
-     * Static bridge so that `auth.ts` (which lives outside the NestJS DI container)
-     * can access the MailService at runtime after the container boots.
-     */
     static getInstance(): MailService | null {
         return MailService.instance;
     }

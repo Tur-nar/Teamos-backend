@@ -4,6 +4,7 @@ import { Reflector } from '@nestjs/core'
 import { RESPONSE_MESSAGE_KEY } from "../decorators/response-message/response-message";
 
 type ResponseTemplate<T> = {
+    success: boolean;
     statusCode: number;
     data: T;
     message: string;
@@ -30,6 +31,7 @@ export class ResponseInterceptor implements NestInterceptor {
         return next.handle().pipe(
             map((data: T) => {
                 return {
+                    success: true,
                     statusCode: response.statusCode,
                     data,
                     message

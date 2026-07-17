@@ -9,8 +9,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: false
   });
-
-  // Security — helmet before anything else (AGENTS.md §8)
   app.use(helmet());
 
   app.setGlobalPrefix('/api/v1');
@@ -22,7 +20,6 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // Validation — whitelist strips unknown properties (AGENTS.md §8)
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -31,7 +28,6 @@ async function bootstrap() {
     }),
   );
 
-  // Response shape — { success: true, data } / { success: false, error } (AGENTS.md §9)
   app.useGlobalInterceptors(app.get(ResponseInterceptor));
   app.useGlobalFilters(new HttpExceptionFilter());
 

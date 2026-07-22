@@ -10,6 +10,7 @@ import { ResponseInterceptor } from './lib/common/interceptors/response-intercep
 import { UserModule } from './modules/user/user.module';
 import { RolesGuard } from './lib/common/guards/roles.guard';
 import { DepartmentModule } from './modules/department/department.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { DepartmentModule } from './modules/department/department.module';
     AuthModule.forRoot({ auth }),
     UserModule,
     DepartmentModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService, ResponseInterceptor, RolesGuard],

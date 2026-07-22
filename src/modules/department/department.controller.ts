@@ -14,7 +14,7 @@ import { ResponseMessage } from 'src/lib/common/decorators/response-message/resp
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 
-@Controller('department')
+@Controller('departments')
 export class DepartmentController {
     constructor(private readonly departmentService: DepartmentService) { }
 
@@ -28,7 +28,7 @@ export class DepartmentController {
         return this.departmentService.create(orgId, dto);
     }
 
-    @Get('all')
+    @Get()
     @ResponseMessage('All departments fetched successfully')
     findAll(@CurrentOrg() orgId: string) {
         return this.departmentService.findAll(orgId);

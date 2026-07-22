@@ -21,10 +21,10 @@ export class RolesGuard implements CanActivate {
 
         const request = context.switchToHttp().getRequest();
         const userId: string | undefined = request.user?.id;
-        const orgId: string | undefined = request.session?.activeorganisationId ?? request.headers?.['x-org-id'];
+        const orgId: string | undefined = request.session?.activeOrganizationId ?? request.headers?.['x-org-id'];
 
         if (!userId || !orgId) {
-            throw new ForbiddenException("No active organisation. Call organisation.setActive() first");
+            throw new ForbiddenException("No active organization. Call organization.setActive() first");
         }
 
         const membership = await this.prisma.member.findFirst({
@@ -33,7 +33,7 @@ export class RolesGuard implements CanActivate {
         })
 
         if (!membership) {
-            throw new ForbiddenException("You are not a member of this organisation");
+            throw new ForbiddenException("You are not a member of this organization");
         }
 
         if (!requiredRoles.includes(membership.role)) {

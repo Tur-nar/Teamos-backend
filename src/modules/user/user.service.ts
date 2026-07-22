@@ -286,7 +286,7 @@ export class UserService {
         if (!currentSupervisor) throw new NotFoundException('Current supervisor not found');
         if (!targetSupervisor) throw new NotFoundException('Target supervisor not found');
 
-        const whereClause: any = { supervisorId: currentSupervisorId, organzationId: orgId };
+        const whereClause: any = { supervisorId: currentSupervisorId, organizationId: orgId };
         if (dto.memberIds) { whereClause.userId = { in: dto.memberIds } }
 
         const count = await this.prisma.userProfile.count({ where: whereClause })

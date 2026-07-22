@@ -11,7 +11,7 @@ import { ReassignTeamDto } from './dto/reassign-team.dto';
 @Controller('users')
 export class UserController {
     constructor(private readonly userService: UserService) { }
-    @Get('all')
+    @Get()
     @ResponseMessage('All Profile Retrieved Successfully')
     async getAll(@Session() session: UserSession) {
         return this.userService.getAllProfile(session.user.id);

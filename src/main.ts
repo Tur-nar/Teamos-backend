@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './lib/common/interceptors/response-interceptors';
 import { HttpExceptionFilter } from './lib/common/filters/http-exception.filter';
+import { RolesGuard } from './lib/common/guards/roles.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -30,6 +31,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(app.get(ResponseInterceptor));
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalGuards(app.get(RolesGuard));
 
   await app.listen(process.env.PORT ?? 3000);
 }

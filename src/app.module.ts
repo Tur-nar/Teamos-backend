@@ -8,6 +8,8 @@ import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { auth } from './lib/auth';
 import { ResponseInterceptor } from './lib/common/interceptors/response-interceptors';
 import { UserModule } from './modules/user/user.module';
+import { RolesGuard } from './lib/common/guards/roles.guard';
+import { DepartmentModule } from './modules/department/department.module';
 
 @Module({
   imports: [
@@ -18,8 +20,9 @@ import { UserModule } from './modules/user/user.module';
     MailModule,
     AuthModule.forRoot({ auth }),
     UserModule,
+    DepartmentModule,
   ],
   controllers: [AppController],
-  providers: [AppService, ResponseInterceptor],
+  providers: [AppService, ResponseInterceptor, RolesGuard],
 })
-export class AppModule {}
+export class AppModule { }

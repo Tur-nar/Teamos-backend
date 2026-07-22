@@ -24,7 +24,7 @@ model User {
 
   members     Member[]
   invitations Invitation[]
-  profile     UserProfile?
+  profiles    UserProfile[]
 
   @@unique([email])
   @@map("user")
@@ -69,56 +69,64 @@ model Account {
 }
 
 model Verification {
-  id         String   @id
-  identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            String   @id
+  identifier    String
+  value         String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([identifier])
   @@map("verification")
 }
 
 model Organization {
-  id          String       @id
-  name        String
-  slug        String
-  logo        String?
-  createdAt   DateTime
-  metadata    String?
-  members     Member[]
-  invitations Invitation[]
+  id            String       @id
+  name          String
+  slug          String
+  logo          String?
+  createdAt     DateTime
+  metadata      String?
+  members       Member[]
+  invitations   Invitation[]
+  departments   Department[]
 
   @@unique([slug])
   @@map("organization")
 }
 
 model Member {
-  id             String       @id
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId         String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role           String       @default("member")
-  createdAt      DateTime
+  id                  String       @id
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId              String
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                Role         @default(member)
+  createdAt           DateTime
 
   @@index([organizationId])
   @@index([userId])
   @@map("member")
 }
 
+enum Role {
+  owner 
+  admin
+  supervisor
+  member
+}
+
 model Invitation {
-  id             String       @id
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  email          String
-  role           String?
-  status         String       @default("pending")
-  expiresAt      DateTime
-  createdAt      DateTime     @default(now())
-  inviterId      String
-  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  id                  String       @id
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email               String
+  role                String?
+  status              String       @default("pending")
+  expiresAt           DateTime
+  createdAt           DateTime     @default(now())
+  inviterId           String
+  user                User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([email])
@@ -126,15 +134,43 @@ model Invitation {
 }
 
 model UserProfile {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  departmentId   String?
-  supervisorId   String?
-  status         String   @default("active") // "active" | "inactive"
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  String           @id @default(uuid())
+  userId              String
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId      String
+  departmentId        String?
+  department          Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  supervisorId        String?
+  status              UserStatus       @default(active)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([departmentId])
+  @@index([supervisorId])
   @@map("user_profile")
 }
 
+enum UserStatus {
+  active
+  inactive
+  onLeave
+}
+
+model Department {
+  id                    String        @id @default(uuid())
+  organizationId        String
+  organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                  String
+  description           String?
+  headId                String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  staff                 UserProfile[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("department")
+}

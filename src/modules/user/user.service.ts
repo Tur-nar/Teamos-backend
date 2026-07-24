@@ -11,25 +11,12 @@ export class UserService {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
             select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-                emailVerified: true,
-                createdAt: true,
-
+                id: true, name: true, email: true, image: true, emailVerified: true, createdAt: true,
                 members: {
                     select: {
-                        id: true,
-                        role: true,
-                        organizationId: true,
+                        id: true, role: true, organizationId: true,
                         organization: {
-                            select: {
-                                id: true,
-                                name: true,
-                                slug: true,
-                                logo: true
-                            }
+                            select: { id: true, name: true, slug: true, logo: true }
                         }
                     }
                 }
@@ -44,25 +31,12 @@ export class UserService {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
             select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-                emailVerified: true,
-                createdAt: true,
-
+                id: true, name: true, email: true, image: true, emailVerified: true, createdAt: true,
                 members: {
                     select: {
-                        id: true,
-                        role: true,
-                        organizationId: true,
+                        id: true, role: true, organizationId: true,
                         organization: {
-                            select: {
-                                id: true,
-                                name: true,
-                                slug: true,
-                                logo: true
-                            }
+                            select: { id: true, name: true, slug: true, logo: true }
                         }
                     }
                 }
@@ -72,19 +46,10 @@ export class UserService {
         if (!user) throw new NotFoundException('User not found');
 
         const profile = await this.prisma.userProfile.findUnique({
-            where: {
-                userId_organizationId: {
-                    userId,
-                    organizationId: orgId,
-                }
-            },
+            where: { userId_organizationId: { userId, organizationId: orgId, } },
             select: {
-                departmentId: true,
-                supervisorId: true,
-                status: true,
-                department: {
-                    select: { id: true, name: true }
-                }
+                departmentId: true, supervisorId: true, status: true,
+                department: { select: { id: true, name: true } }
             }
         });
 
@@ -109,17 +74,8 @@ export class UserService {
                 ...(filters?.status && { status: filters.status as any }),
             },
             include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        image: true,
-                    },
-                },
-                department: {
-                    select: { id: true, name: true },
-                },
+                user: { select: { id: true, name: true, email: true, image: true } },
+                department: { select: { id: true, name: true } },
             },
         });
 
@@ -128,23 +84,13 @@ export class UserService {
                 organizationId: orgId,
                 ...(filters?.role && { role: filters.role as any }),
             },
-            select: {
-                userId: true,
-                user: { select: { name: true, image: true, email: true, id: true } },
-                id: true,
-                role: true,
-            },
+            select: { userId: true, user: { select: { name: true, image: true, email: true, id: true } }, id: true, role: true, },
         });
 
-        const profileMap = new Map(
-            profiles.map((p) => [p.userId, p]),
-        );
+        const profileMap = new Map(profiles.map((p) => [p.userId, p]));
 
         return members
-            .filter((m) => {
-                if ((filters?.departmentId || filters?.status) && !profileMap.has(m.userId)) return false;
-                return true;
-            })
+            .filter((m) => { if ((filters?.departmentId || filters?.status) && !profileMap.has(m.userId)) return false; return true; })
             .map((m) => {
                 const profile = profileMap.get(m.userId);
                 return {
@@ -163,22 +109,11 @@ export class UserService {
     async findSupervisors(orgId: string) {
         const supervisors = await this.prisma.member.findMany({
             where: { organizationId: orgId, role: 'supervisor' },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        image: true
-                    }
-                }
-            }
-        })
+            include: { user: { select: { id: true, name: true, email: true, image: true } } }
+        });
         const supervisorUserIds = supervisors.map((sm) => sm.userId)
         const supervisorProfiles = await this.prisma.userProfile.findMany({
-            where: {
-                userId: { in: supervisorUserIds }, organizationId: orgId
-            },
+            where: { userId: { in: supervisorUserIds }, organizationId: orgId },
             include: { department: { select: { id: true, name: true } } }
         });
 
@@ -232,41 +167,25 @@ export class UserService {
     };
 
     async updateProfile(orgId: string, targetUserId: string, dto: UpdateProfileDto) {
-        const membership = await this.prisma.member.findFirst({
-            where: { organizationId: orgId, userId: targetUserId },
-        });
+        const membership = await this.prisma.member.findFirst({ where: { organizationId: orgId, userId: targetUserId }, });
         if (!membership) throw new NotFoundException('User not found in this organization');
 
         if (dto.departmentId) {
-            const dept = await this.prisma.department.findFirst({
-                where: { organizationId: orgId, id: dto.departmentId }
-            })
+            const dept = await this.prisma.department.findFirst({ where: { organizationId: orgId, id: dto.departmentId } })
             if (!dept) throw new BadRequestException('Department Not Found')
         }
 
         if (dto.supervisorId) {
             const supMembership = await this.prisma.member.findFirst({
-                where: {
-                    organizationId: orgId, userId: dto.supervisorId,
-                    role: { in: ['supervisor', 'admin', 'owner'] }
-                }
+                where: { organizationId: orgId, userId: dto.supervisorId, role: { in: ['supervisor', 'admin', 'owner'] } }
             });
             if (!supMembership) throw new BadRequestException('Target supervisor not found or does not have supervisor or higher role')
         };
 
         return this.prisma.userProfile.upsert({
-            where: {
-                userId_organizationId: { userId: targetUserId, organizationId: orgId, }
-            },
-            update: {
-                ...dto,
-                status: dto.status as any,
-            },
-            create: {
-                userId: targetUserId, organizationId: orgId,
-                status: dto.status as any,
-                ...dto
-            },
+            where: { userId_organizationId: { userId: targetUserId, organizationId: orgId, } },
+            update: { ...dto, status: dto.status as any, },
+            create: { userId: targetUserId, organizationId: orgId, status: dto.status as any, ...dto, },
             include: {
                 user: { select: { id: true, name: true, email: true, image: true } },
                 department: { select: { id: true, name: true } }
@@ -276,12 +195,8 @@ export class UserService {
 
     async reassignTeam(orgId: string, currentSupervisorId: string, dto: ReassignTeamDto) {
         const [currentSupervisor, targetSupervisor] = await Promise.all([
-            this.prisma.member.findFirst({
-                where: { organizationId: orgId, userId: currentSupervisorId },
-            }),
-            this.prisma.member.findFirst({
-                where: { organizationId: orgId, userId: dto.targetSupervisorId }
-            })
+            this.prisma.member.findFirst({ where: { organizationId: orgId, userId: currentSupervisorId } }),
+            this.prisma.member.findFirst({ where: { organizationId: orgId, userId: dto.targetSupervisorId } })
         ])
         if (!currentSupervisor) throw new NotFoundException('Current supervisor not found');
         if (!targetSupervisor) throw new NotFoundException('Target supervisor not found');
@@ -292,9 +207,7 @@ export class UserService {
         const count = await this.prisma.userProfile.count({ where: whereClause })
         if (count === 0) throw new BadRequestException('No team members found to reassign')
 
-        const result = await this.prisma.userProfile.updateMany({
-            where: whereClause, data: { supervisorId: dto.targetSupervisorId },
-        })
+        const result = await this.prisma.userProfile.updateMany({ where: whereClause, data: { supervisorId: dto.targetSupervisorId }, })
 
         return { reassignedCount: result.count }
 

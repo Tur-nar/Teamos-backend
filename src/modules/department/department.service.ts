@@ -3,7 +3,7 @@ import { PrismaService } from '../../lib/prisma/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 
-@Injectable()
+@Injectable() 
 export class DepartmentService {
     constructor(private readonly prisma: PrismaService) { }
 

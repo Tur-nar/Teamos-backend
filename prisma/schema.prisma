@@ -25,6 +25,8 @@ model User {
   members     Member[]
   invitations Invitation[]
   profiles    UserProfile[]
+  assignedTasksTo     Task[]           @relation("TaskAssignedTo")
+  assignedTasksBy     Task[]           @relation("TaskAssignedBy")
 
   @@unique([email])
   @@map("user")
@@ -169,8 +171,107 @@ model Department {
   updatedAt             DateTime      @updatedAt
 
   staff                 UserProfile[]
+  task                  Task[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
   @@map("department")
+}
+
+model Task {
+  id                  String           @id @default(uuid())
+  organizationId      String
+  title               String
+  description         String?
+  status              TaskStatus       @default(NOT_STARTED)
+  priority            Priority         @default(MEDIUM)
+  deadline            DateTime?
+  completedAt         DateTime?
+  assignedToId        String
+  assignedTo          User      @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  assignedById        String
+  assignedBy          User      @relation("TaskAssignedBy", fields: [assignedById], references: [id])
+  departmentId        String?
+  dependsOnTaskId     String?
+  estimatedHours      Float?
+  actualHours         Float?
+  tags                String[]
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  department          Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  dependsOn           Task?            @relation("TaskDependency", fields: [dependsOnTaskId], references: [id])
+  dependents          Task[]           @relation("TaskDependency")
+  subTasks            SubTask[]
+  comments            TaskComment[]
+  attachments         TaskAttachment[]
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([departmentId])
+  @@index([status])
+  @@index([priority])
+  @@index([deadline])
+  @@map("task")
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+  COMPLETED_LATE
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model SubTask {
+  id                  String           @id @default(uuid())
+  taskId              String
+  title               String
+  isCompleted         Boolean          @default(false)
+  order               Int
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  task                Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("subtask")
+}
+
+model TaskComment {
+  id                  String           @id @default(uuid())
+  taskId              String
+  userId              String
+  content             String
+  parentCommentId     String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  task                Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  parent              TaskComment?    @relation("Replies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies             TaskComment[]   @relation("Replies")
+
+  @@index([taskId])
+  @@index([parentCommentId])
+  @@map("task_comment")
+}
+
+model TaskAttachment {
+  id                  String      @id @default(uuid())
+  taskId              String
+  fileUrl             String
+  fileName            String
+  fileSize            Int
+  uploadedById        String
+  createdAt           DateTime    @default(now())
+  task                Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("task_attachment")
 }

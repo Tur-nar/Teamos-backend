@@ -32,6 +32,8 @@ export class RolesGuard implements CanActivate {
             select: { role: true }
         })
 
+        request._currentRole = membership?.role ?? null;
+
         if (!membership) {
             throw new ForbiddenException("You are not a member of this organization");
         }

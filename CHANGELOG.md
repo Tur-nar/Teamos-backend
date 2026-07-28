@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Task management core module (`TaskModule`, `TaskService`, `TaskController`) with task creation, filtering, update, deletion, and role based visibility scoping
+- Task status lifecycle tracking (`NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, `OVERDUE`, `COMPLETED_LATE`) enforcing deadline and overdue transition rules
+- Task dependency validation ensuring a task cannot move to `IN_PROGRESS` while its required prior task remains unfinished
+- Subtask management endpoints supporting item completion toggling and list reordering
+- Threaded task commenting system supporting top level comments and nested replies
+- Task attachment file uploads using Cloudinary integration in `UploadService`
+- Real time WebSockets gateway (`TaskGateway`) broadcasting live updates for task, subtask, comment, and attachment events
 - Cloudinary upload module (`UploadModule`, `UploadService`) with avatar/logo upload support, registered in `AppModule`
 - `x-org-id` to the CORS `allowedHeaders` list so the organization header fallback is not blocked by preflight checks
 - `exports: [UserService]` to `UserModule` so other modules can inject the user service

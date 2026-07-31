@@ -12,21 +12,25 @@ datasource db {
 }
 
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  id                      String            @id
+  name                    String
+  email                   String
+  emailVerified           Boolean           @default(false)
+  image                   String?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  
+  sessions                Session[]
+  accounts                Account[]
 
-  members     Member[]
-  invitations Invitation[]
-  profiles    UserProfile[]
-  assignedTasksTo     Task[]           @relation("TaskAssignedTo")
-  assignedTasksBy     Task[]           @relation("TaskAssignedBy")
+  members                 Member[]
+  invitations             Invitation[]
+  profiles                UserProfile[]
+  assignedTasksTo         Task[]             @relation("TaskAssignedTo")
+  assignedTasksBy         Task[]             @relation("TaskAssignedBy")
+  assignedTargets         Target[]           @relation("TargetAssignedTo")
+  createdByTargets        Target[]           @relation("TargetCreatedBy")
+  targetEntries           TargetEntry[]      @relation("TargetEntryUser")
 
   @@unique([email])
   @@map("user")
@@ -92,6 +96,7 @@ model Organization {
   members       Member[]
   invitations   Invitation[]
   departments   Department[]
+  targets       Target[]
 
   @@unique([slug])
   @@map("organization")
@@ -172,6 +177,7 @@ model Department {
 
   staff                 UserProfile[]
   task                  Task[]
+  targets               Target[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -274,4 +280,73 @@ model TaskAttachment {
 
   @@index([taskId])
   @@map("task_attachment")
+}
+
+model Target {
+  id                    String           @id @default(uuid())
+  organizationId        String
+  title                 String
+  description           String?
+  type                  TargetType       @default(COMPANY)
+  parentTargetId        String?
+  targetValue           Float
+  currentValue          Float            @default(0)
+  status                TargetStatus       @default(ON_TRACK)
+  period                String?
+  deadline              DateTime
+  assignedToId          String?
+  createdById           String
+  departmentId          String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  organization          Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent                Target?         @relation("TargetAlignment", fields: [parentTargetId], references: [id])
+  children              Target[]        @relation("TargetAlignment")
+  entries               TargetEntry[]
+  assignedTo            User?           @relation("TargetAssignedTo", fields: [assignedToId], references: [id])
+  createdBy             User            @relation("TargetCreatedBy", fields: [createdById], references: [id])
+  department            Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, title, period])
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([departmentId])
+  @@index([type])
+  @@index([status])
+  @@index([parentTargetId])
+  @@index([period])
+  @@map("target")
+}
+
+model TargetEntry {
+  id                    String       @id @default(uuid())
+  targetId              String
+  userId                String
+  value                 Float
+  note                  String?
+  attachmentUrl         String?
+  attachmentName        String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  target                Target         @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  user                  User           @relation("TargetEntryUser", fields: [userId], references: [id])
+
+  @@index([targetId])
+  @@index([userId])
+  @@map("target_entry")
+}
+
+enum TargetType {
+  COMPANY
+  TEAM
+  INDIVIDUAL
+}
+
+enum TargetStatus {
+  ON_TRACK
+  AT_RISK
+  COMPLETED
+  MISSED
 }

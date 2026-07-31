@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Target module (`TargetModule`, `TargetService`, `TargetController`) for OKRs and target tracking
+- Cascading target alignment supporting three level hierarchy (`COMPANY`, `TEAM`, `INDIVIDUAL`), depth limits, circular reference checks, and automatic progress rollup calculations
+- Strategy map endpoint (`GET /targets/strategy-map`) returning the nested target alignment tree with progress percentages
+- Progress entry logging with file attachments via Cloudinary integration and status guards blocking updates on completed or missed targets
+- Target Socket.io real time gateway event broadcasting (`target:created`, `target:updated`, `target:deleted`, `targetEntry:added`, `targetEntry:deleted`)
+- Unit test suite for target service covering target CRUD, alignment validation, progress rollups, strategy map generation, and access control
 - Task management core module (`TaskModule`, `TaskService`, `TaskController`) with task creation, filtering, update, deletion, and role based visibility scoping
 - Task status lifecycle tracking (`NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, `OVERDUE`, `COMPLETED_LATE`) enforcing deadline and overdue transition rules
 - Task dependency validation ensuring a task cannot move to `IN_PROGRESS` while its required prior task remains unfinished
@@ -20,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `exports: [DepartmentService]` to `DepartmentModule` so other modules can inject the department service
 
 ### Fixed
+- Access check for individual target progress logging where non assignees were granted access while assignees were blocked
+- Route matching and error handling order in `findOne` where access checks executed before validating target existence
+- Target creation validation rule that blocked assignees on team targets instead of restricting them on company targets only
+- Filter parameter handling in `findAll` so search parameters combine with role scoping rules instead of overwriting them
 - `RolesGuard` read `activeorganisationId` (lowercase, British spelling) from the session instead of `activeOrganizationId`, which meant the guard never received the organization ID from Better Auth's session and every role protected route would fail unless the `x-org-id` header was sent
 - `reassignTeam` where clause used `organzationId` (missing letter "i"), so Prisma silently ignored the organization filter and the bulk update could match profiles across all organizations instead of only the active one
 - Department controller route changed from `/department` to `/departments` (plural) to follow REST conventions and match the Phase 2 API documentation

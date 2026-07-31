@@ -12,6 +12,7 @@ import { RolesGuard } from './lib/common/guards/roles.guard';
 import { DepartmentModule } from './modules/department/department.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { TaskModule } from './modules/task/task.module';
+import { TargetModule } from './modules/target/target.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TaskModule } from './modules/task/task.module';
     DepartmentModule,
     UploadModule,
     TaskModule,
+    TargetModule,
   ],
   controllers: [AppController],
   providers: [AppService, ResponseInterceptor, RolesGuard],

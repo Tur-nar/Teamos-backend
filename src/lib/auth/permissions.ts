@@ -1,14 +1,6 @@
 import { createAccessControl } from 'better-auth/plugins/access';
 
-/**
- * Resource-based permissions for the TeamOS organization plugin.
- *
- * Maps the old system's 4-tier hierarchy:
- *   super_admin → owner  |  admin → admin  |  supervisor → supervisor  |  staff → member
- *
- * @see {@link file:///docs/DOCUMENTATION.md#L49-L56} — original role definitions
- * @see {@link file:///docs/teamos-roadmap.md#L57-L62} — roadmap role mapping
- */
+
 const statement = {
     organization: ['update', 'delete'],
     member: ['create', 'update', 'remove'],

@@ -8,9 +8,9 @@ import {
     Body,
 } from '@nestjs/common';
 import { DepartmentService } from './department.service';
-import { CurrentOrg } from 'src/lib/common/decorators/current-org/current-org.decorator';
-import { Roles } from 'src/lib/common/decorators/roles/roles.decorator';
-import { ResponseMessage } from 'src/lib/common/decorators/response-message/response-message';
+import { CurrentOrg } from '../../lib/common/decorators/current-org/current-org.decorator';
+import { Roles } from '../../lib/common/decorators/roles/roles.decorator';
+import { ResponseMessage } from '../../lib/common/decorators/response-message/response-message';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 

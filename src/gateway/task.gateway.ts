@@ -266,4 +266,6 @@ export class TaskGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     emitTargetDeleted(orgId: string, targetId: string) { this.server.to(`org:${orgId}`).emit('target:deleted', targetId); }
     emitTargetEntryAdded(orgId: string, entry: any) { this.server.to(`org:${orgId}`).emit('targetEntry:added', entry); }
     emitTargetEntryDeleted(orgId: string, { entryId, updatedTarget }: { entryId: string, updatedTarget: any }) { this.server.to(`org:${orgId}`).emit('targetEntry:deleted', { entryId, updatedTarget }); }
+    emitPerformanceUpdated(orgId: string, record: any) { this.server.to(`org:${orgId}`).emit('performance:updated', record); }
+    emitInsightGenerated(orgId: string, insight: any) { this.server.to(`org:${orgId}`).emit('insight:generated', insight); }
 }

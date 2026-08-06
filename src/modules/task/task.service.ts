@@ -12,13 +12,17 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { outranks } from '../../lib/common/constants/role-rank';
 import { TaskGateway } from '../../gateway/task.gateway';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TASK_EVENTS, TaskCreatedEvent, TaskStatusChangedEvent, TaskDeletedEvent, TaskReassignedEvent } from '../../lib/common/events/task.events';
+
 
 @Injectable()
 export class TaskService {
     constructor(
         private readonly uploadService: UploadService,
         private readonly prisma: PrismaService,
-        private readonly taskGateway: TaskGateway
+        private readonly taskGateway: TaskGateway,
+        private readonly eventEmitter: EventEmitter2,
     ) { }
 
     async create(orgId: string, assignedById: string, dto: CreateTaskDto) {
@@ -60,6 +64,7 @@ export class TaskService {
         });
 
         this.taskGateway.emitTaskCreated(orgId, task);
+        this.eventEmitter.emit(TASK_EVENTS.CREATED, new TaskCreatedEvent(orgId, task.assignedToId));
         return task;
     }
 
@@ -177,6 +182,9 @@ export class TaskService {
         });
 
         if (!updatedTask) throw new Error("Failed to update task immediately after update");
+        if (dto.assignedToId && task.assignedToId !== dto.assignedToId) {
+            this.eventEmitter.emit(TASK_EVENTS.REASSIGNED, new TaskReassignedEvent(orgId, dto.assignedToId, task.assignedToId));
+        }
         this.taskGateway.emitTaskUpdated(orgId, updatedTask);
         return updatedTask;
     };
@@ -231,6 +239,7 @@ export class TaskService {
 
         if (!updatedTask) throw new Error("Failed to update task immediately after update")
         this.taskGateway.emitTaskStatusChanged(orgId, taskId, finalStatus)
+        this.eventEmitter.emit(TASK_EVENTS.STATUS_CHANGED, new TaskStatusChangedEvent(orgId, task.assignedToId, currentStatus, finalStatus));
         return updatedTask;
     }
 
@@ -261,6 +270,7 @@ export class TaskService {
         await Promise.allSettled(task.attachments.map(a => this.uploadService.deleteFile(a.fileUrl)));
 
         await this.prisma.task.delete({ where: { id: taskId } })
+        this.eventEmitter.emit(TASK_EVENTS.DELETED, new TaskDeletedEvent(orgId, task.assignedToId, task.status));
         this.taskGateway.emitTaskDeleted(orgId, taskId);
     }
 

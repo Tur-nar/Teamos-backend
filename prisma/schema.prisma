@@ -31,6 +31,9 @@ model User {
   assignedTargets         Target[]           @relation("TargetAssignedTo")
   createdByTargets        Target[]           @relation("TargetCreatedBy")
   targetEntries           TargetEntry[]      @relation("TargetEntryUser")
+  performances            Performance[]
+  performanceSnapshots    PerformanceSnapshot[]      
+  aiInsights              AIInsight[]       
 
   @@unique([email])
   @@map("user")
@@ -87,16 +90,20 @@ model Verification {
 }
 
 model Organization {
-  id            String       @id
-  name          String
-  slug          String
-  logo          String?
-  createdAt     DateTime
-  metadata      String?
-  members       Member[]
-  invitations   Invitation[]
-  departments   Department[]
-  targets       Target[]
+  id                        String                @id
+  name                      String
+  slug                      String
+  logo                      String?
+  createdAt                 DateTime
+  metadata                  String?
+  
+  members                   Member[]
+  invitations               Invitation[]
+  departments               Department[]
+  targets                   Target[]
+  performances              Performance[]
+  performanceSnapshots      PerformanceSnapshot[]
+  aiInsights                AIInsight[]
 
   @@unique([slug])
   @@map("organization")
@@ -349,4 +356,69 @@ enum TargetStatus {
   AT_RISK
   COMPLETED
   MISSED
+}
+
+model Performance {
+  id                          String           @id @default(uuid())
+  organizationId              String
+  userId                      String
+  taskCompleted               Int              @default(0)
+  tasksOnTime                 Int              @default(0)
+  tasksCompletedLate          Int              @default(0)
+  tasksLate                   Int              @default(0)
+  totalTasksAssigned          Int              @default(0)
+  performanceScore            Float            @default(50)
+  rating                      String           @default("Average")
+  updatedAt                   DateTime         @updatedAt
+
+  organization                Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshots                   PerformanceSnapshot[]
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@map("performance")
+}
+
+model PerformanceSnapshot {
+  id                          String           @id @default(uuid())
+  performanceId               String
+  organizationId              String
+  userId                      String
+  period                      String
+  taskCompleted               Int              
+  tasksOnTime                 Int              
+  tasksCompletedLate          Int              
+  tasksLate                   Int              
+  totalTasksAssigned          Int              
+  performanceScore            Float            
+  rating                      String           
+  createdAt                   DateTime         @default(now())
+
+  performance                 Performance      @relation(fields: [performanceId], references: [id], onDelete: Cascade)
+  organization                Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, period])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([performanceId])
+  @@map("performance_snapshot")
+}
+
+model AIInsight {
+  id                          String                @id @default(uuid())
+  organizationId              String
+  userId                      String
+  type                        String
+  context                     Json
+  response                    String
+  createdAt                   DateTime              @default(now())
+
+  organization                Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("ai_insight")
 }

@@ -3,47 +3,21 @@ import { PrismaService } from '../../lib/prisma/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 
-@Injectable() 
+@Injectable()
 export class DepartmentService {
     constructor(private readonly prisma: PrismaService) { }
 
     async create(orgId: string, dto: CreateDepartmentDto) {
         const existing = await this.prisma.department.findUnique({
-            where: {
-                organizationId_name: {
-                    organizationId: orgId,
-                    name: dto.name
-                }
-            }
+            where: { organizationId_name: { organizationId: orgId, name: dto.name, } }
         })
-        if (existing) {
-            throw new ConflictException(`Department "${dto.name}" already exists in this organization`)
-        }
+        if (existing) throw new ConflictException(`Department "${dto.name}" already exists in this organization`)
 
-        if (dto.headId) {
-            await this.validateOrgMember(orgId, dto.headId);
-        }
+        if (dto.headId) await this.validateOrgMember(orgId, dto.headId);
+
         return this.prisma.department.create({
-            data: {
-                organizationId: orgId,
-                name: dto.name,
-                description: dto.description,
-                headId: dto.headId
-            },
-            include: {
-                staff: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                image: true,
-                            }
-                        }
-                    }
-                }
-            }
+            data: { organizationId: orgId, name: dto.name, description: dto.description, headId: dto.headId },
+            include: { staff: { include: { user: { select: { id: true, name: true, email: true, image: true, } } } }, },
         })
     }
 
@@ -51,62 +25,32 @@ export class DepartmentService {
         const departments = await this.prisma.department.findMany({
             where: { organizationId: orgId },
             include: {
-                staff: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                image: true,
-                            }
-                        }
-                    }
-                },
+                staff: { include: { user: { select: { id: true, name: true, email: true, image: true, } } } },
                 _count: { select: { staff: true } }
             },
             orderBy: { name: 'asc' },
         });
 
-        return Promise.all(
-            departments.map(async (department) => {
-                const head = department.headId ? await this.prisma.user.findUnique({
-                    where: { id: department.headId },
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        image: true,
-                    }
-                }) : null;
+        return Promise.all(departments.map(async (department) => {
+            const head = department.headId ? await this.prisma.user.findUnique({
+                where: { id: department.headId },
+                select: { id: true, name: true, email: true, image: true, }
+            }) : null;
 
-                return {
-                    ...department,
-                    head,
-                    staffCount: department._count.staff,
-                    activeStaffCount: department.staff.filter((s) => s.status === 'active').length
-                };
-            }),
+            return {
+                ...department,
+                head,
+                staffCount: department._count.staff,
+                activeStaffCount: department.staff.filter((s) => s.status === 'active').length
+            };
+        }),
         );
     }
 
     async findOne(orgId: string, id: string) {
         const department = await this.prisma.department.findUnique({
             where: { organizationId: orgId, id },
-            include: {
-                staff: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                image: true,
-                            }
-                        }
-                    }
-                },
-            },
+            include: { staff: { include: { user: { select: { id: true, name: true, email: true, image: true, } } } }, },
         })
 
         if (!department) throw new NotFoundException('Department not found')

@@ -24,6 +24,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `x-org-id` to the CORS `allowedHeaders` list so the organization header fallback is not blocked by preflight checks
 - `exports: [UserService]` to `UserModule` so other modules can inject the user service
 - `exports: [DepartmentService]` to `DepartmentModule` so other modules can inject the department service
+- Performance module (`PerformanceModule`, `PerformanceService`, `PerformanceController`) tracking per user task completion metrics, on time rate, and a weighted performance score with an automatic letter rating (see spec 0002)
+- Performance score recalculation triggered by task lifecycle events (created, status changed, deleted, reassigned) via `@nestjs/event-emitter` and processed asynchronously through a BullMQ queue and `PerformanceProcessor`
+- Task event classes (`TaskCreatedEvent`, `TaskStatusChangedEvent`, `TaskDeletedEvent`, `TaskReassignedEvent`) published from `TaskService` on every task write so downstream modules react without direct coupling
+- Performance history snapshots (`PerformanceSnapshot` model) captured daily by a scheduled cron job, with a unique constraint per org, user, and period to prevent duplicates
+- Performance trend endpoint (`GET /performances/:userId/trend`) returning snapshot history filtered by period (`daily`, `weekly`, `monthly`)
+- Organisation level performance stats endpoint (`GET /performances/stats`) aggregating averages, rating distributions, and top/bottom performers (admin and owner only)
+- Manual recalculation trigger (`POST /performances/recalculate`) allowing admins and owners to force a full org wide score refresh
+- AI powered insight generation (`POST /performances/:userId/insights/generate`) using `LlmService` to produce natural language analysis of a user's task performance, stored in the `AIInsight` model
+- Daily automated insight generation cron job (1:00 AM) that creates AI insights only when a user's score has shifted beyond a configurable threshold since the last snapshot
+- `LlmModule` and `LlmService` abstracting LLM calls behind a provider switch (`gemini` or `openai`) configured via `LLM_PROVIDER` and `LLM_API_KEY` environment variables
+- `SchedulerModule` with `PerformanceCronTask` running three cron jobs: overdue task detection (every 10 minutes), daily performance snapshots (midnight), and daily AI insight generation (1:00 AM)
+- `GatewayModule` extracting `TaskGateway` into a shared module so it is registered once and injected wherever needed instead of being listed as a provider in each feature module
+- Prisma `Performance`, `PerformanceSnapshot`, and `AIInsight` models with organisation and user scoping, cascading deletes, and composite unique constraints
+- WebSocket events `performance:updated` and `insight:generated` broadcast to the organisation room after each recalculation or insight creation
+- `EventEmitterModule` and `BullModule` (Redis backed) registered in `AppModule` as global infrastructure for event driven processing
+- `@nestjs/event-emitter`, `@nestjs/schedule`, `bullmq`, and `openai` as new runtime dependencies
+- Unit test suites for `PerformanceService`, `PerformanceController`, `PerformanceProcessor`, `PerformanceCronTask`, and `LlmService`
+
+### Changed
+- `TaskGateway` is no longer listed as a provider in `TaskModule` and `TargetModule`; it is now imported through `GatewayModule` to avoid duplicate Socket.io server instances
+- `DepartmentService` internal formatting condensed (no behavioural change)
 
 ### Fixed
 - Access check for individual target progress logging where non assignees were granted access while assignees were blocked

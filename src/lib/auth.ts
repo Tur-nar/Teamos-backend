@@ -27,6 +27,13 @@ export const auth = betterAuth({
         ) ?? []),
     ].filter(Boolean) as string[],
     emailAndPassword: { enabled: true },
+    advanced: {
+        defaultCookieAttributes: {
+            sameSite: "none",
+            secure: true,
+            partitioned: true,
+        },
+    },
 
     socialProviders: {
         // apple: {

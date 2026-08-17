@@ -21,6 +21,11 @@ const mockPerformanceService = {
     generateInsight: jest.fn(),
 };
 
+const mockReviewService = {
+    markOverdueReviews: jest.fn(),
+    sendDeadlineReminders: jest.fn(),
+};
+
 const mockConfigService = {
     get: jest.fn((key: string, defaultValue?: any) => {
         if (key === 'PERFORMANCE_INSIGHT_THRESHOLD') return 5;
@@ -41,6 +46,7 @@ describe('PerformanceCronTask', () => {
             mockPrisma as any,
             mockPerformanceService as any,
             mockConfigService as any,
+            mockReviewService as any,
             mockQueue as any,
         );
     });
@@ -175,6 +181,42 @@ describe('PerformanceCronTask', () => {
             mockPrisma.organization.findMany.mockRejectedValue(new Error('LLM error'));
 
             await expect(cronTask.handleDailyInsights()).resolves.not.toThrow();
+        });
+    });
+
+    // ── Review Overdue Detection (AC-10) ───────────────────────────
+
+    describe('handleReviewOverdueDetection', () => {
+        it('calls reviewService.markOverdueReviews', async () => {
+            mockReviewService.markOverdueReviews.mockResolvedValue(4);
+
+            await cronTask.handleReviewOverdueDetection();
+
+            expect(mockReviewService.markOverdueReviews).toHaveBeenCalled();
+        });
+
+        it('catches errors without crashing', async () => {
+            mockReviewService.markOverdueReviews.mockRejectedValue(new Error('Overdue error'));
+
+            await expect(cronTask.handleReviewOverdueDetection()).resolves.not.toThrow();
+        });
+    });
+
+    // ── Review Deadline Reminders (AC-10) ──────────────────────────
+
+    describe('handleReviewDeadlineReminders', () => {
+        it('calls reviewService.sendDeadlineReminders', async () => {
+            mockReviewService.sendDeadlineReminders.mockResolvedValue(2);
+
+            await cronTask.handleReviewDeadlineReminders();
+
+            expect(mockReviewService.sendDeadlineReminders).toHaveBeenCalled();
+        });
+
+        it('catches errors without crashing', async () => {
+            mockReviewService.sendDeadlineReminders.mockRejectedValue(new Error('Reminder error'));
+
+            await expect(cronTask.handleReviewDeadlineReminders()).resolves.not.toThrow();
         });
     });
 });

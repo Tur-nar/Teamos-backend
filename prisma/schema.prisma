@@ -12,28 +12,35 @@ datasource db {
 }
 
 model User {
-  id                      String            @id
-  name                    String
-  email                   String
-  emailVerified           Boolean           @default(false)
-  image                   String?
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  id                              String                        @id
+  name                            String
+  email                           String
+  emailVerified                   Boolean                       @default(false)
+  image                           String?
+  createdAt                       DateTime                      @default(now())
+  updatedAt                       DateTime                      @updatedAt
   
-  sessions                Session[]
-  accounts                Account[]
-
-  members                 Member[]
-  invitations             Invitation[]
-  profiles                UserProfile[]
-  assignedTasksTo         Task[]             @relation("TaskAssignedTo")
-  assignedTasksBy         Task[]             @relation("TaskAssignedBy")
-  assignedTargets         Target[]           @relation("TargetAssignedTo")
-  createdByTargets        Target[]           @relation("TargetCreatedBy")
-  targetEntries           TargetEntry[]      @relation("TargetEntryUser")
-  performances            Performance[]
-  performanceSnapshots    PerformanceSnapshot[]      
-  aiInsights              AIInsight[]       
+  sessions                        Session[]
+  accounts                        Account[]
+  members                         Member[]
+  invitations                     Invitation[]
+  profiles                        UserProfile[]
+  assignedTasksTo                 Task[]                        @relation("TaskAssignedTo")
+  assignedTasksBy                 Task[]                        @relation("TaskAssignedBy")
+  assignedTargets                 Target[]                      @relation("TargetAssignedTo")
+  createdByTargets                Target[]                      @relation("TargetCreatedBy")
+  targetEntries                   TargetEntry[]                 @relation("TargetEntryUser")
+  aiInsights                      AIInsight[]
+  performances                    Performance[]
+  performanceSnapshots            PerformanceSnapshot[]
+  createdTemplates                ReviewTemplate[]              @relation("TemplateCreatedBy")
+  createdCycles                   ReviewCycle[]                 @relation("CycleCreatedBy")
+  reviewAsReviewee                PerformanceReview[]           @relation("ReviewReviewee")
+  reviewAsReviewer                PerformanceReview[]           @relation("ReviewReviewer")
+  nominationsGiven                PeerNomination[]              @relation("NominationNominator")
+  nominationsReceived             PeerNomination[]              @relation("NominationNominee")
+  nominationReviewed              PeerNomination[]              @relation("NominationReviewedBy")
+  claibrationsLed                 CalibrationSession[]          @relation("CalibrationFacilitator")
 
   @@unique([email])
   @@map("user")
@@ -104,6 +111,11 @@ model Organization {
   performances              Performance[]
   performanceSnapshots      PerformanceSnapshot[]
   aiInsights                AIInsight[]
+  reviewTemplates           ReviewTemplate[]
+  reviewCycles              ReviewCycle[]
+  performanceReviews        PerformanceReview[]
+  peerNominations           PeerNomination[]
+  calibrationSessions       CalibrationSession[]
 
   @@unique([slug])
   @@map("organization")
@@ -173,18 +185,19 @@ enum UserStatus {
 }
 
 model Department {
-  id                    String        @id @default(uuid())
-  organizationId        String
-  organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name                  String
-  description           String?
-  headId                String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  id                          String                      @id @default(uuid())
+  organizationId              String
+  organization                Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                        String
+  description                 String?
+  headId                      String?
+  createdAt                   DateTime                    @default(now())
+  updatedAt                   DateTime                    @updatedAt
 
-  staff                 UserProfile[]
-  task                  Task[]
-  targets               Target[]
+  staff                       UserProfile[]
+  tasks                       Task[]
+  targets                     Target[]
+  calibrationSessions         CalibrationSession[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -369,11 +382,14 @@ model Performance {
   totalTasksAssigned          Int              @default(0)
   performanceScore            Float            @default(50)
   rating                      String           @default("Average")
+  reviewScore                 Float?
+  lastReviewCycleId           String?
   updatedAt                   DateTime         @updatedAt
 
   organization                Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user                        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   snapshots                   PerformanceSnapshot[]
+  lastReviewCycle             ReviewCycle?      @relation("PerformanceLastCycle", fields: [lastReviewCycleId], references: [id])
 
   @@unique([organizationId, userId])
   @@index([organizationId])
@@ -392,12 +408,14 @@ model PerformanceSnapshot {
   tasksLate                   Int              
   totalTasksAssigned          Int              
   performanceScore            Float            
-  rating                      String           
+  rating                      String
+  lastReviewCycleId           String?
   createdAt                   DateTime         @default(now())
 
   performance                 Performance      @relation(fields: [performanceId], references: [id], onDelete: Cascade)
   organization                Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user                        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReviewCycle             ReviewCycle?      @relation("PerformanceSnapshotLastCycle", fields: [lastReviewCycleId], references: [id])
 
   @@unique([organizationId, userId, period])
   @@index([organizationId])
@@ -421,4 +439,138 @@ model AIInsight {
   @@index([organizationId])
   @@index([userId])
   @@map("ai_insight")
+}
+
+model ReviewTemplate {
+  id                          String           @id @default(uuid())
+  organizationId              String
+  title                       String
+  description                 String?
+  sections                    Json
+  isDefault                   Boolean          @default(false)
+  createdById                 String
+
+  organization                Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy                   User             @relation("TemplateCreatedBy",fields: [createdById], references: [id], onDelete: Cascade)
+  reviewCycles                ReviewCycle[]
+
+  @@index([organizationId])
+  @@map("review_template")
+}
+
+model ReviewCycle {
+  id                          String                  @id @default(uuid())
+  organizationId              String
+  templateId                  String
+  name                        String
+  startDate                   DateTime
+  endDate                     DateTime
+  status                      ReviewCycleStatus       @default(DRAFT)
+  templateSnapshot            Json?
+  excludedUserIds             String[]               @default([])
+  createdById                 String
+  createdAt                   DateTime               @default(now())
+
+  organization                Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  template                    ReviewTemplate          @relation(fields: [templateId], references: [id])
+  createdBy                   User                    @relation("CycleCreatedBy",fields: [createdById], references: [id], onDelete: Cascade)
+  
+  reviews                     PerformanceReview[]
+  nominations                 PeerNomination[]
+  calibrations                CalibrationSession[]
+  linkedPerformances          Performance[]           @relation("PerformanceLastCycle")
+  linkedPerformancesSnapshot  PerformanceSnapshot[]   @relation("PerformanceSnapshotLastCycle")
+
+  @@index([organizationId])
+  @@map("review_cycle")
+}
+
+model PerformanceReview {
+  id                          String                    @id @default(uuid())
+  reviewCycleId               String
+  organizationId              String
+  revieweeId                  String
+  reviewerId                  String
+  type                        ReviewType
+  responses                   Json?
+  overallScore                Float?
+  status                      ReviewSubmissionStatus    @default(PENDING)
+  submittedAt                 DateTime?
+  createdAt                   DateTime                  @default(now())
+
+  reviewCycle                 ReviewCycle               @relation(fields: [reviewCycleId], references: [id], onDelete: Cascade)
+  organization                Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviewee                    User                      @relation("ReviewReviewee", fields: [revieweeId], references: [id])
+  reviewer                    User                      @relation("ReviewReviewer", fields: [reviewerId], references: [id])
+
+  @@unique([reviewCycleId, revieweeId, reviewerId])
+  @@index([reviewCycleId])
+  @@index([revieweeId])
+  @@index([reviewerId])
+  @@map("performance_review")
+}
+
+model PeerNomination {
+  id                          String              @id @default(uuid())
+  reviewCycleId               String
+  organizationId              String
+  nominatorId                 String
+  nomineeId                   String
+  status                      NominationStatus    @default(PENDING)
+  reviewedById                String?
+  createdAt                   DateTime            @default(now())
+
+  reviewCycle                 ReviewCycle         @relation(fields: [reviewCycleId], references: [id], onDelete: Cascade)
+  organization                Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  nominator                   User                @relation("NominationNominator", fields: [nominatorId], references: [id])
+  nominee                     User                @relation("NominationNominee", fields: [nomineeId], references: [id])
+  reviewedBy                  User?               @relation("NominationReviewedBy", fields: [reviewedById], references: [id])
+
+  @@unique([reviewCycleId, nominatorId, nomineeId])
+  @@map("peer_nomination")
+}
+
+model CalibrationSession {
+  id                            String                  @id @default(uuid())
+  reviewCycleId               String
+  organizationId              String
+  departmentId                String?
+  facilitatorId               String
+  adjustedScores              Json                      @default("{}")
+  status                      String                    @default("in_progress")
+  finalizedAt                 DateTime?
+  createdAt                   DateTime                  @default(now())
+
+  reviewCycle                 ReviewCycle               @relation(fields: [reviewCycleId], references: [id], onDelete: Cascade)
+  organization                Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department                  Department?               @relation(fields: [departmentId], references: [id])
+  facilitator                 User                      @relation("CalibrationFacilitator", fields: [facilitatorId], references: [id])
+
+  @@index([reviewCycleId])
+  @@map("calibration_session")
+}
+
+enum ReviewCycleStatus {
+  DRAFT
+  ACTIVE
+  CALIBRATING
+  COMPLETED
+}
+
+enum ReviewType {
+  SELF
+  MANAGER
+  PEER
+  UPWARD
+}
+
+enum ReviewSubmissionStatus {
+  PENDING
+  SUBMITTED
+  OVERDUE
+}
+enum NominationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { TaskStatus } from '@prisma/client';
+import { ReviewService } from '../modules/review/review.service';
 
 @Injectable()
 export class PerformanceCronTask {
@@ -16,6 +17,7 @@ export class PerformanceCronTask {
         private readonly prisma: PrismaService,
         private readonly performanceService: PerformanceService,
         private readonly configService: ConfigService,
+        private readonly reviewService: ReviewService,
         @InjectQueue('performance') private readonly performanceQueue: Queue,
     ) {
         this.insightThreshold = this.configService.get<number>('PERFORMANCE_INSIGHT_THRESHOLD', 5);
@@ -71,8 +73,7 @@ export class PerformanceCronTask {
             let created = 0;
             for (const org of orgs) {
                 const performances = await this.prisma.performance.findMany({
-                    where: { organizationId: org.id },
-                    select: { userId: true },
+                    where: { organizationId: org.id }, select: { userId: true },
                 });
 
                 for (const perf of performances) {
@@ -87,7 +88,7 @@ export class PerformanceCronTask {
         }
     }
 
-    @Cron('0 1 * * *') // 1:00 AM daily, after snapshots complete
+    @Cron('0 1 * * *')
     async handleDailyInsights() {
         this.logger.log('Running daily AI insight generation...');
         try {
@@ -101,8 +102,7 @@ export class PerformanceCronTask {
 
                 for (const perf of performances) {
                     const lastSnapshot = await this.prisma.performanceSnapshot.findFirst({
-                        where: { organizationId: org.id, userId: perf.userId },
-                        orderBy: { createdAt: 'desc' },
+                        where: { organizationId: org.id, userId: perf.userId }, orderBy: { createdAt: 'desc' },
                     });
 
                     const scoreDelta = lastSnapshot
@@ -115,10 +115,30 @@ export class PerformanceCronTask {
                     }
                 }
             }
-
             this.logger.log(`Generated ${generated} AI insight(s)`);
         } catch (error) {
             this.logger.error(`Daily insight generation failed: ${error.message}`);
+        }
+    }
+
+    @Cron(CronExpression.EVERY_DAY_AT_6AM)
+    async handleReviewOverdueDetection() {
+        this.logger.log('Running review overdue detection...');
+        try {
+            const marked = await this.reviewService.markOverdueReviews();
+            this.logger.log(`Marked ${marked} review(s) as OVERDUE`);
+        } catch (error) {
+            this.logger.error(`Review overdue detection failed: ${error.message}`);
+        }
+    }
+    @Cron(CronExpression.EVERY_DAY_AT_8AM)
+    async handleReviewDeadlineReminders() {
+        this.logger.log('Running review deadline reminders...');
+        try {
+            const cycleCount = await this.reviewService.sendDeadlineReminders();
+            this.logger.log(`Sent reminders for ${cycleCount} cycle(s)`);
+        } catch (error) {
+            this.logger.error(`Review deadline reminders failed: ${error.message}`);
         }
     }
 }

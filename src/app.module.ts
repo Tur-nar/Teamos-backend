@@ -19,6 +19,7 @@ import { PerformanceModule } from './modules/performance/performance.module';
 import { LlmModule } from './lib/llm/llm.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { GatewayModule } from './gateway/gateway.module';
     LlmModule,
     SchedulerModule,
     GatewayModule,
+    ReviewModule,
   ],
   controllers: [AppController],
   providers: [AppService, ResponseInterceptor, RolesGuard],

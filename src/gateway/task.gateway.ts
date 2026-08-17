@@ -2,6 +2,7 @@ import { WebSocketGateway, WebSocketServer, SubscribeMessage, OnGatewayConnectio
 import { Server, Socket } from 'socket.io';
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { PrismaService } from '../lib/prisma/prisma.service';
+import { ReviewType } from '@prisma/client';
 
 const SESSION_COOKIE_NAME = 'better-auth.session_token';
 
@@ -268,4 +269,8 @@ export class TaskGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     emitTargetEntryDeleted(orgId: string, { entryId, updatedTarget }: { entryId: string, updatedTarget: any }) { this.server.to(`org:${orgId}`).emit('targetEntry:deleted', { entryId, updatedTarget }); }
     emitPerformanceUpdated(orgId: string, record: any) { this.server.to(`org:${orgId}`).emit('performance:updated', record); }
     emitInsightGenerated(orgId: string, insight: any) { this.server.to(`org:${orgId}`).emit('insight:generated', insight); }
+    emitReviewAssigned(orgId: string, { cycleId, cycleName, reviewCount }: { cycleId: string, cycleName: string, reviewCount: number }) { this.server.to(`org:${orgId}`).emit('review:assigned', { cycleId, cycleName, reviewCount }); }
+    emitReviewSubmitted(orgId: string, review: { reviewId: string, cycleId: string, revieweeId: string, type: ReviewType }) { this.server.to(`org:${orgId}`).emit('review:submitted', review); }
+    emitCalibrationCompleted(orgId: string, { sessionId, cycleId, departmentId }: { sessionId: string, cycleId: string, departmentId: string }) { this.server.to(`org:${orgId}`).emit('calibration:completed', { sessionId, cycleId, departmentId }); }
+    emitReviewOverdue(orgId: string, { cycleId, overdueCount }: { cycleId: string, overdueCount: number }) { this.server.to(`org:${orgId}`).emit('review:overdue', { cycleId, overdueCount }); }
 }

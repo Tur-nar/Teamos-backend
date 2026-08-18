@@ -41,6 +41,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EventEmitterModule` and `BullModule` (Redis backed) registered in `AppModule` as global infrastructure for event driven processing
 - `@nestjs/event-emitter`, `@nestjs/schedule`, `bullmq`, and `openai` as new runtime dependencies
 - Unit test suites for `PerformanceService`, `PerformanceController`, `PerformanceProcessor`, `PerformanceCronTask`, and `LlmService`
+- Review module (`ReviewModule`, `ReviewService`, `ReviewController`) for structured 360 degree performance review cycles, peer nominations, and score calibration (see spec 0005)
+- Prisma models `ReviewTemplate`, `ReviewCycle`, `PerformanceReview`, `PeerNomination`, and `CalibrationSession` with organization scoping, cascade deletes, and composite unique constraints
+- `reviewScore` and `lastReviewCycleId` fields on the `Performance` model to store calibrated human review scores alongside automated task scores
+- Review templates CRUD endpoints allowing administrators and owners to build reusable question sets with rating scale (1 to 5) and free text questions
+- Review cycles lifecycle management supporting `DRAFT`, `ACTIVE`, `CALIBRATING`, and `COMPLETED` stages with transactional template snapshotting
+- Automatic generation of 360 degree reviews (`SELF`, `MANAGER`, and `UPWARD`) upon cycle activation for all active organization members inside a database transaction
+- Peer nominations workflow allowing members to nominate up to 3 peers per cycle, with single and bulk administrative approval endpoints that auto generate `PEER` reviews
+- AI assisted draft generation endpoint (`POST /review/reviews/:id/draft`) powered by `LlmService` using the reviewee's task performance history and cycle questions
+- Review submission endpoint (`POST /review/reviews/:id/submit`) with strict rating scale response validation, automated average score calculation, and duplicate submission prevention
+- Aggregated feedback endpoint (`GET /review/review-cycles/:cycleId/my-feedback`) with caller anonymity masking reviewer identities from reviewees, and full review list for administrators
+- Department level calibration sessions allowing facilitators to review raw scores, apply adjustments with required notes, and write final calibrated scores directly into the `Performance` model
+- Daily cron jobs in `PerformanceCronTask` for automated overdue review detection at 6:00 AM and 48 hour deadline reminder notifications at 8:00 AM
+- Socket.io gateway event broadcasting (`review:assigned`, `review:submitted`, `review:overdue`, `calibration:completed`) via `TaskGateway`
+- Unit test suite for `ReviewService` (57 tests), `ReviewController` (29 tests), and `PerformanceCronTask` (15 tests) bringing the review and scheduler suite to 101 passing tests
+- Frontend API documentation for Phase 7 in `docs/api/phase-7.md`
 
 ### Changed
 - `TaskGateway` is no longer listed as a provider in `TaskModule` and `TargetModule`; it is now imported through `GatewayModule` to avoid duplicate Socket.io server instances

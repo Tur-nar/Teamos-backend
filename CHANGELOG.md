@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Recognition module (`RecognitionModule`, `RecognitionService`, `RecognitionController`) allowing supervisors, admins, and owners to give positive kudos to team and org members (see spec 0006)
+- Predefined recognition categories (`TEAMWORK`, `INNOVATION`, `LEADERSHIP`, `CUSTOMER_FOCUS`, `GOING_ABOVE_AND_BEYOND`, `OTHER`) with custom category support for `OTHER`
+- Public and private recognition visibility controls with paginated feed endpoints (`GET /recognition/feed`, `GET /recognition/my`)
+- Complaint module (`ComplaintModule`, `ComplaintService`, `ComplaintController`) for multi tenant issue reporting, targeting specific team members, and role based visibility scoping (see spec 0006)
+- Complaint lifecycle workflow (`OPEN` -> `IN_REVIEW` -> `RESOLVED` / `DISMISSED`) with targeted user in review transitions and administrative resolution note tracking
+- Automated two hour late complaint detection cron job (`ComplaintCronTask`) running every 5 minutes and marking unattended complaints as `LATE`
+- Complaint aggregated stats endpoint (`GET /complaint/stats`) returning status counts scoped to the caller's role and visibility
+- Real time Socket.io event broadcasting for complaints (`complaint:created`, `complaint:statusChanged`, `complaint:deleted`, `complaint:late`) via `TaskGateway`
+- Email notification integration dispatching automated alerts via Resend when complaints are submitted, transitioned, or overdue
+- Unit test suites for `RecognitionService`, `RecognitionController`, `ComplaintService`, `ComplaintController`, and `ComplaintCronTask` with 62 passing tests
 - Target module (`TargetModule`, `TargetService`, `TargetController`) for OKRs and target tracking
 - Cascading target alignment supporting three level hierarchy (`COMPANY`, `TEAM`, `INDIVIDUAL`), depth limits, circular reference checks, and automatic progress rollup calculations
 - Strategy map endpoint (`GET /targets/strategy-map`) returning the nested target alignment tree with progress percentages
@@ -62,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `DepartmentService` internal formatting condensed (no behavioural change)
 
 ### Fixed
+- Ternary condition in `RecognitionService.create` where `customCategory` was validated with `dto.customCategory === RecognitionCategory.OTHER` rather than `dto.category === RecognitionCategory.OTHER`, which previously caused custom categories to always be saved as null (see spec 0006)
 - Access check for individual target progress logging where non assignees were granted access while assignees were blocked
 - Route matching and error handling order in `findOne` where access checks executed before validating target existence
 - Target creation validation rule that blocked assignees on team targets instead of restricting them on company targets only

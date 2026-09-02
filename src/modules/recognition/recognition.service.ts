@@ -30,7 +30,7 @@ export class RecognitionService {
             data: {
                 organizationId: orgId, fromUserId: fromUserId, toUserId: dto.toUserId,
                 message: dto.message, category: dto.category,
-                customCategory: dto.customCategory === RecognitionCategory.OTHER ? dto.customCategory : null,
+                customCategory: dto.category === RecognitionCategory.OTHER ? dto.customCategory : null,
                 isPublic: dto.isPublic,
             },
             include: {

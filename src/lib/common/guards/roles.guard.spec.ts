@@ -26,7 +26,7 @@ function createMockContext(overrides: {
     const request = {
         user: overrides.userId ? { id: overrides.userId } : undefined,
         session: overrides.activeOrganizationId
-            ? { activeorganisationId: overrides.activeOrganizationId }
+            ? { activeOrganizationId: overrides.activeOrganizationId }
             : undefined,
         headers: overrides.headers ?? {},
     };

@@ -3,6 +3,7 @@ import { TaskService } from './task.service';
 import { PrismaService } from '../../lib/prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { TaskGateway } from '../../gateway/task.gateway';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 
 // ── Mocks ──────────────────────────────────────────────────────────
@@ -63,6 +64,10 @@ const mockTaskGateway = {
     emitCommentDeleted: jest.fn(),
 };
 
+const mockEventEmitter = {
+    emit: jest.fn(),
+};
+
 // ── Fixtures ───────────────────────────────────────────────────────
 
 const ORG_ID = 'org-1';
@@ -92,6 +97,7 @@ describe('TaskService', () => {
                 { provide: PrismaService, useValue: mockPrisma },
                 { provide: UploadService, useValue: mockUploadService },
                 { provide: TaskGateway, useValue: mockTaskGateway },
+                { provide: EventEmitter2, useValue: mockEventEmitter },
             ],
         }).compile();
 

@@ -41,6 +41,11 @@ model User {
   nominationsReceived             PeerNomination[]              @relation("NominationNominee")
   nominationReviewed              PeerNomination[]              @relation("NominationReviewedBy")
   claibrationsLed                 CalibrationSession[]          @relation("CalibrationFacilitator")
+  recognitionsGiven               Recognition[]                 @relation("RecognitionFrom")
+  recognitionsReceived            Recognition[]                 @relation("RecognitionTo")
+  complaintsSubmitted             Complaint[]                   @relation("ComplaintSubmittedBy")
+  complaintsResolved              Complaint[]                   @relation("ComplaintResolvedBy")
+  complaintsTargeted              ComplaintTarget[]             @relation("ComplaintTarget")
 
   @@unique([email])
   @@map("user")
@@ -116,6 +121,8 @@ model Organization {
   performanceReviews        PerformanceReview[]
   peerNominations           PeerNomination[]
   calibrationSessions       CalibrationSession[]
+  recognitions              Recognition[]
+  complaints                Complaint[]
 
   @@unique([slug])
   @@map("organization")
@@ -573,4 +580,90 @@ enum NominationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model Recognition {
+  id                          String                  @id @default(uuid())
+  organizationId              String
+  fromUserId                  String
+  toUserId                    String
+  message                     String
+  category                    RecognitionCategory
+  customCategory              String?
+  isPublic                    Boolean             @default(true)
+  createdAt                   DateTime            @default(now())
+
+  organization                Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fromUser                    User                @relation("RecognitionFrom", fields: [fromUserId], references: [id])
+  toUser                      User                @relation("RecognitionTo", fields: [toUserId], references: [id])
+
+  @@index([organizationId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("recognition")
+}
+
+model Complaint {
+  id                          String                  @id @default(uuid())
+  organizationId              String
+  title                       String
+  description                 String
+  category                    ComplaintCategory       @default(BUG)
+  priority                    Priority                @default(MEDIUM)
+  status                      ComplaintStatus         @default(OPEN)
+  resolution                  String?
+  resolvedAt                  DateTime?
+  userId                      String
+  resolvedById                String?
+  createdAt                   DateTime                @default(now())
+  updatedAt                   DateTime                @updatedAt
+
+  organization                Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  submittedBy                 User                    @relation("ComplaintSubmittedBy", fields: [userId], references: [id])
+  resolvedBy                  User?                   @relation("ComplaintResolvedBy", fields: [resolvedById], references: [id])
+  targets                     ComplaintTarget[]       
+  
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("complaint")
+}
+
+model ComplaintTarget {
+  id              String        @id @default(uuid())
+  complaintId     String
+  userId          String
+
+  complaint       Complaint       @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  user            User            @relation("ComplaintTarget", fields: [userId], references: [id])
+
+  @@unique([complaintId, userId])
+  @@index([complaintId])
+  @@index([userId])
+  @@map("complaint_target")
+}
+
+enum RecognitionCategory {
+  TEAMWORK
+  INNOVATION
+  LEADERSHIP
+  CUSTOMER_FOCUS
+  GOING_ABOVE_AND_BEYOND
+  OTHER
+}
+
+enum ComplaintCategory {
+  BUG
+  COMPLAINT
+  SUGGESTION
+  ERROR
+  OTHER
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_REVIEW
+  LATE
+  RESOLVED
+  DISMISSED
 }

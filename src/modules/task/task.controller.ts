@@ -57,7 +57,8 @@ export class TaskController {
     @Patch(':id/status')
     @ResponseMessage('Task status updated successfully')
     updateStatus(
-        @CurrentOrg() orgId: string, @Param('id') taskId: string, @Body() dto: UpdateTaskStatusDto, @Session() session: nestjsBetterAuth.UserSession
+        @CurrentOrg() orgId: string, @Param('id') taskId: string,
+        @Body() dto: UpdateTaskStatusDto, @Session() session: nestjsBetterAuth.UserSession
     ) {
         return this.taskService.updateStatus(orgId, taskId, dto, session.user.id)
     }

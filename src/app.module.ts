@@ -20,6 +20,8 @@ import { LlmModule } from './lib/llm/llm.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { ReviewModule } from './modules/review/review.module';
+import { RecognitionModule } from './modules/recognition/recognition.module';
+import { ComplaintModule } from './modules/complaint/complaint.module';
 
 @Module({
   imports: [
@@ -49,6 +51,8 @@ import { ReviewModule } from './modules/review/review.module';
     SchedulerModule,
     GatewayModule,
     ReviewModule,
+    RecognitionModule,
+    ComplaintModule,
   ],
   controllers: [AppController],
   providers: [AppService, ResponseInterceptor, RolesGuard],

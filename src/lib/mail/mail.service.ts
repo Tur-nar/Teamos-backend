@@ -23,15 +23,12 @@ export class MailService implements OnModuleInit {
 
     onModuleInit() {
         MailService.instance = this;
-
         const apiKey = this.configService.get<string>('RESEND_API_KEY');
         if (apiKey) {
             this.resend = new Resend(apiKey);
             this.logger.log('Resend configured — emails will be delivered');
         } else {
-            this.logger.warn(
-                'RESEND_API_KEY not set — emails will be logged to console only',
-            );
+            this.logger.warn('RESEND_API_KEY not set — emails will be logged to console only');
         }
     }
 
@@ -43,10 +40,7 @@ export class MailService implements OnModuleInit {
         if (this.resend) {
             try {
                 await this.resend.emails.send({
-                    from: this.from,
-                    to: options.to,
-                    subject: options.subject,
-                    html: options.html,
+                    from: this.from, to: options.to, subject: options.subject, html: options.html,
                 });
                 this.logger.log(`Email sent to ${options.to}: "${options.subject}"`);
             } catch (error) {
@@ -56,9 +50,7 @@ export class MailService implements OnModuleInit {
                 throw error;
             }
         } else {
-            this.logger.log(
-                `[DEV] Email to: ${options.to} | Subject: ${options.subject}`,
-            );
+            this.logger.log(`[DEV] Email to: ${options.to} | Subject: ${options.subject}`);
             this.logger.debug(options.html);
         }
     }

@@ -4,6 +4,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { PerformanceCronTask } from './performance.task';
 import { PerformanceModule } from '../modules/performance/performance.module';
 import { ReviewModule } from 'src/modules/review/review.module';
+import { ComplaintModule } from '../modules/complaint/complaint.module';
+import { ComplaintCronTask } from './complaint.task';
 
 @Module({
     imports: [
@@ -11,7 +13,8 @@ import { ReviewModule } from 'src/modules/review/review.module';
         BullModule.registerQueue({ name: 'performance' }),
         PerformanceModule,
         ReviewModule,
+        ComplaintModule
     ],
-    providers: [PerformanceCronTask],
+    providers: [PerformanceCronTask, ComplaintCronTask],
 })
 export class SchedulerModule { }

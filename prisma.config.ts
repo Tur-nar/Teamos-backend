@@ -3,12 +3,17 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+const rawUrl = process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"] ?? "";
+const url = rawUrl && !rawUrl.includes("connect_timeout")
+  ? (rawUrl.includes("?") ? `${rawUrl}&connect_timeout=30` : `${rawUrl}?connect_timeout=30`)
+  : rawUrl;
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url,
   },
 });

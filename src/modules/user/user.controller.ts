@@ -17,6 +17,12 @@ export class UserController {
         return this.userService.getAllProfile(session.user.id);
     }
 
+    @Patch('me/complete-onboarding')
+    @ResponseMessage('Onboarding completed')
+    completeOnboarding(@Session() session: UserSession) {
+        return this.userService.completeOnboarding(session.user.id);
+    }
+
     @Get('me')
     @ResponseMessage('Profile Retrieved Successfully')
     getMe(

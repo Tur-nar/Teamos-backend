@@ -212,4 +212,12 @@ export class UserService {
         return { reassignedCount: result.count }
 
     }
+
+    async completeOnboarding(userId: string): Promise<{ onboarded: true }> {
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { onboarded: true },
+        });
+        return { onboarded: true };
+    }
 }

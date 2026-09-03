@@ -22,6 +22,7 @@ import { GatewayModule } from './gateway/gateway.module';
 import { ReviewModule } from './modules/review/review.module';
 import { RecognitionModule } from './modules/recognition/recognition.module';
 import { ComplaintModule } from './modules/complaint/complaint.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ComplaintModule } from './modules/complaint/complaint.module';
     ReviewModule,
     RecognitionModule,
     ComplaintModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService, ResponseInterceptor, RolesGuard],

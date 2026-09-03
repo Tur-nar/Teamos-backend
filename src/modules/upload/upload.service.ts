@@ -40,6 +40,36 @@ export class UploadService {
         });
     }
 
+    /**
+     * Uploads an organization logo to Cloudinary.
+     * NOTE: No org membership check here — the org does not exist yet at upload time.
+     * The returned URL is held client-side and passed to authClient.organization.create.
+     */
+    async uploadOrgLogo(file: Express.Multer.File): Promise<string> {
+        if (!file) throw new BadRequestException('No file uploaded');
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.mimetype)) throw new BadRequestException('Invalid file type. Allowed: JPEG, PNG, GIF, WEBP');
+
+        const maxSize = 5 * 1024 * 1024; // 5 MB
+        if (file.size > maxSize) throw new BadRequestException('File size must be less than 5MB');
+
+        return new Promise<string>((resolve, reject) => {
+            cloudinary.uploader.upload_stream({
+                folder: 'team-os/org-logos',
+                public_id: `logo_org_${Date.now()}`,
+                transformation: [
+                    { width: 400, height: 400, crop: 'fill' },
+                    { quality: 'auto', fetch_format: 'auto' },
+                ],
+            }, (error, result: UploadApiResponse | undefined) => {
+                if (error) return reject(new BadRequestException('Upload failed: ' + error.message));
+                if (result) return resolve(result.secure_url);
+                reject(new BadRequestException('Upload failed: Unexpected error'));
+            }).end(file.buffer);
+        });
+    }
+
     async uploadTaskAttachment(file: Express.Multer.File, taskId: string): Promise<{ url: string; fileName: string; fileSize: number }> {
         if (!file) throw new BadRequestException('No file uploaded');
 

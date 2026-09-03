@@ -27,6 +27,14 @@ export const auth = betterAuth({
         ) ?? []),
     ].filter(Boolean) as string[],
     emailAndPassword: { enabled: true },
+    user: {
+        additionalFields: {
+            onboarded: {
+                type: 'boolean',
+                defaultValue: false,
+            },
+        },
+    },
     advanced: {
         defaultCookieAttributes: {
             sameSite: "none",

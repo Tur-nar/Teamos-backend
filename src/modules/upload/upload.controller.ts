@@ -18,4 +18,13 @@ export class UploadController {
         const url = await this.uploadService.uploadAvatarOrLogo(file, session.user.id);
         return { url };
     }
+
+    @Post('org-logo')
+    @UseInterceptors(FileInterceptor('logo'))
+    async uploadOrgLogo(
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        const url = await this.uploadService.uploadOrgLogo(file);
+        return { url };
+    }
 }

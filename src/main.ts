@@ -33,6 +33,8 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalGuards(app.get(RolesGuard));
 
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  // await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+  await app.listen(process.env.PORT ?? 3000);
+
 }
 bootstrap();

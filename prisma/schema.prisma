@@ -46,6 +46,7 @@ model User {
   complaintsSubmitted             Complaint[]                   @relation("ComplaintSubmittedBy")
   complaintsResolved              Complaint[]                   @relation("ComplaintResolvedBy")
   complaintsTargeted              ComplaintTarget[]             @relation("ComplaintTarget")
+  notifications                   Notification[]
 
   @@unique([email])
   @@map("user")
@@ -108,6 +109,7 @@ model Organization {
   logo                      String?
   createdAt                 DateTime
   metadata                  String?
+  notificationEmailPrefs    Json                  @default("[\"OVERDUE_ALERT\", \"DEADLINE_WARNING\", \"COMPLAINT_CREATED\", \"TARGET_MISSED\"]")
   
   members                   Member[]
   invitations               Invitation[]
@@ -123,6 +125,7 @@ model Organization {
   calibrationSessions       CalibrationSession[]
   recognitions              Recognition[]
   complaints                Complaint[]
+  notifications             Notification[]
 
   @@unique([slug])
   @@map("organization")
@@ -666,4 +669,48 @@ enum ComplaintStatus {
   LATE
   RESOLVED
   DISMISSED
+}
+
+model Notification {
+  id                          String                    @id @default(uuid())
+  organizationId              String
+  userId                      String
+  type                        NotificationType
+  severity                    NotificationSeverity      @default(INFO)
+  title                       String
+  message                     String
+  isRead                      Boolean                   @default(false)
+  relatedTaskId               String?
+  relatedEntityId             String?
+  relatedEntityType           String?
+  readAt                      DateTime?
+  createdAt                   DateTime                  @default(now())
+
+  organization                Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notification")
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_COMPLETED
+  DEADLINE_WARNING
+  OVERDUE_ALERT
+  TARGET_MISSED
+  TARGET_AT_RISK
+  COMPLAINT_CREATED
+  COMPLAINT_STATUS_CHANGED
+  REVIEW_ASSIGNED
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+  CRITICAL
 }

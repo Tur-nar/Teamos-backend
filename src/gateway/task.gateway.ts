@@ -291,4 +291,5 @@ export class TaskGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     emitComplaintLate(orgId, { complaintId, title }: { complaintId: string, title: string }) {
         this.server.to(`org:${orgId}`).emit('complaint:late', { complaintId, title })
     }
+    emitNotification(orgId: string, userId: string, notification: any) { this.server.to(`org:${orgId}`).emit(`user:${userId}:notification`, notification); }
 }

@@ -8,11 +8,13 @@ import { LlmService } from 'src/lib/llm/llm.service';
 import { CreateReviewTemplateDto } from './dto/create-review-template.dto';
 import { UpdateReviewTemplateDto } from './dto/update-review-template.dto';
 import { CreateReviewCycleDto } from './dto/create-review-cycle.dto';
-import { NominationStatus, Prisma, ReviewCycleStatus, ReviewSubmissionStatus, ReviewType } from '@prisma/client';
+import { NominationStatus, NotificationType, Prisma, ReviewCycleStatus, ReviewSubmissionStatus, ReviewType } from '@prisma/client';
 import { UpdateReviewCycleDto } from './dto/update-review-cycle.dto';
 import { SubmitReviewDto } from './dto/submit-review-.dto';
 import { CreateNominationDto } from './dto/create-nomination.dto';
 import { AdjustCalibrationDto } from './dto/adjust-calibration.dto';
+import { NotificationService } from '../notification/notification.service';
+import { NOTIFICATION_SEVERITY_MAP } from '../notification/notification.constants';
 
 @Injectable()
 export class ReviewService {
@@ -22,6 +24,7 @@ export class ReviewService {
         private readonly prisma: PrismaService,
         private readonly taskGateway: TaskGateway,
         private readonly llmService: LlmService,
+        private readonly notificationService: NotificationService,
     ) { }
 
     async createTemplate(orgId: string, userId: string, dto: CreateReviewTemplateDto) {
@@ -244,6 +247,14 @@ export class ReviewService {
             return { cycle: updatedCycle, reviewCount: deduped.length }
         });
         this.taskGateway.emitReviewAssigned(orgId, { cycleId, cycleName: cycle.name, reviewCount: result.reviewCount })
+        if (eligibleUserIds.length > 0) {
+            this.notificationService.dispatchToMany({
+                orgId, userIds: eligibleUserIds, type: NotificationType.REVIEW_ASSIGNED,
+                severity: NOTIFICATION_SEVERITY_MAP.REVIEW_ASSIGNED,
+                title: `Review Cycle: ${cycle.name}`, message: `You have been assigned a new review cycle "${cycle.name}".`,
+                relatedEntityId: cycle.id, relatedEntityType: 'reviewCycle',
+            });
+        }
         return result.cycle;
     }
 

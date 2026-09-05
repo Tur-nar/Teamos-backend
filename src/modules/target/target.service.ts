@@ -245,7 +245,7 @@ export class TargetService {
             throw new ForbiddenException('You do not have permission to delete this target');
         }
 
-        const deleted = await this.prisma.target.delete({
+        await this.prisma.target.delete({
             where: { id: targetId, organizationId: orgId, }
         })
 

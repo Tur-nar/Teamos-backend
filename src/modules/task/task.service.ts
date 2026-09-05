@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, ForbiddenException 
 import { UploadService } from '../upload/upload.service';
 import { PrismaService } from '../../lib/prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
-import { Priority, TaskStatus } from '@prisma/client';
+import { NotificationType, Priority, TaskStatus } from '@prisma/client';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
 import { CreateSubTaskDto } from './dto/create-subtask.dto';
@@ -14,6 +14,8 @@ import { outranks } from '../../lib/common/constants/role-rank';
 import { TaskGateway } from '../../gateway/task.gateway';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TASK_EVENTS, TaskCreatedEvent, TaskStatusChangedEvent, TaskDeletedEvent, TaskReassignedEvent } from '../../lib/common/events/task.events';
+import { NotificationService } from '../notification/notification.service';
+import { NOTIFICATION_SEVERITY_MAP } from '../notification/notification.constants';
 
 
 @Injectable()
@@ -23,6 +25,7 @@ export class TaskService {
         private readonly prisma: PrismaService,
         private readonly taskGateway: TaskGateway,
         private readonly eventEmitter: EventEmitter2,
+        private readonly notificationService: NotificationService
     ) { }
 
     async create(orgId: string, assignedById: string, dto: CreateTaskDto) {
@@ -64,6 +67,12 @@ export class TaskService {
         });
 
         this.taskGateway.emitTaskCreated(orgId, task);
+        this.notificationService.dispatch({
+            orgId, userId: task.assignedToId, type: NotificationType.TASK_ASSIGNED,
+            severity: NOTIFICATION_SEVERITY_MAP.TASK_ASSIGNED, title: `Task Assigned: ${task.title}`,
+            message: `You have been assigned "${task.title}". ${task.deadline ? `Deadline: ${new Date(task.deadline).toLocaleDateString()}` : ''}`,
+            relatedTaskId: task.id,
+        })
         this.eventEmitter.emit(TASK_EVENTS.CREATED, new TaskCreatedEvent(orgId, task.assignedToId));
         return task;
     }
@@ -186,6 +195,15 @@ export class TaskService {
             this.eventEmitter.emit(TASK_EVENTS.REASSIGNED, new TaskReassignedEvent(orgId, dto.assignedToId, task.assignedToId));
         }
         this.taskGateway.emitTaskUpdated(orgId, updatedTask);
+        if (dto.assignedToId && task.assignedToId !== dto.assignedToId) {
+            this.notificationService.dispatch({
+                orgId, userId: dto.assignedToId, type: NotificationType.TASK_ASSIGNED,
+                severity: NOTIFICATION_SEVERITY_MAP.TASK_ASSIGNED, title: `Task Reassigned: ${updatedTask.title}`,
+                message: `You have been assigned "${updatedTask.title}". ${updatedTask.deadline ? `Deadline: ${new Date(updatedTask.deadline).toLocaleDateString()}` : ''}`,
+                relatedTaskId: updatedTask.id,
+            })
+        }
+
         return updatedTask;
     };
 
@@ -239,6 +257,17 @@ export class TaskService {
 
         if (!updatedTask) throw new Error("Failed to update task immediately after update")
         this.taskGateway.emitTaskStatusChanged(orgId, taskId, finalStatus)
+        if (newStatus === 'COMPLETED' || newStatus === 'COMPLETED_LATE') {
+            this.notificationService.dispatch({
+                orgId,
+                userId: task.assignedById,
+                type: NotificationType.TASK_COMPLETED,
+                severity: NOTIFICATION_SEVERITY_MAP.TASK_COMPLETED,
+                title: `Task Completed: ${task.title}`,
+                message: `"${task.title}" has been completed${newStatus === 'COMPLETED_LATE' ? ' (completed late)' : ''}.`,
+                relatedTaskId: task.id,
+            });
+        }
         this.eventEmitter.emit(TASK_EVENTS.STATUS_CHANGED, new TaskStatusChangedEvent(orgId, task.assignedToId, currentStatus, finalStatus));
         return updatedTask;
     }

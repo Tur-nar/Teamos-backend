@@ -1,5 +1,5 @@
 import { Injectable, Logger, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { Complaint, ComplaintStatus, ComplaintTarget, Prisma, Role } from '@prisma/client';
+import { Complaint, ComplaintStatus, ComplaintTarget, NotificationType, Prisma, Role } from '@prisma/client';
 import { TaskGateway } from '../../gateway/task.gateway';
 import { PrismaService } from '../../lib/prisma/prisma.service';
 import { MailService } from '../../lib/mail/mail.service';
@@ -7,6 +7,8 @@ import { CreateComplaintDto } from './dto/create-complaint.dto';
 import { ComplaintQueryDto } from './dto/complaint-query.dto';
 import { ROLE_RANK } from '../../lib/common/constants/role-rank';
 import { UpdateComplaintStatusDto } from './dto/update-complaint-status.dto';
+import { NotificationService } from '../notification/notification.service';
+import { NOTIFICATION_SEVERITY_MAP } from '../notification/notification.constants';
 
 const VALID_TRANSITIONS: Record<string, ComplaintStatus[]> = {
     OPEN: [ComplaintStatus.IN_REVIEW],
@@ -20,7 +22,8 @@ export class ComplaintService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly mailService: MailService,
-        private readonly gateway: TaskGateway
+        private readonly gateway: TaskGateway,
+        private readonly notificationService: NotificationService,
     ) { }
 
     async create(orgId: string, userId: string, dto: CreateComplaintDto) {
@@ -64,6 +67,37 @@ export class ComplaintService {
         });
 
         this.gateway.emitComplaintCreated(orgId, complaint);
+        const targetUserIds = complaint?.targets.map(t => t.userId);
+        if (targetUserIds && targetUserIds.length > 0) {
+            this.notificationService.dispatchToMany({
+                orgId,
+                userIds: targetUserIds,
+                type: NotificationType.COMPLAINT_CREATED,
+                severity: NOTIFICATION_SEVERITY_MAP.COMPLAINT_CREATED,
+                title: `New Complaint: ${complaint?.title}`,
+                message: `A complaint "${complaint?.title}" has been filed and you have been named as a target.`,
+                relatedEntityId: complaint?.id,
+                relatedEntityType: 'complaint',
+            });
+        }
+
+        const admins = await this.prisma.member.findMany({
+            where: { organizationId: orgId, role: { in: ['admin', 'owner'] } },
+            select: { userId: true },
+        });
+        const adminIds = admins.map(a => a.userId).filter(id => id !== userId);
+        if (adminIds.length > 0) {
+            this.notificationService.dispatchToMany({
+                orgId,
+                userIds: adminIds,
+                type: NotificationType.COMPLAINT_CREATED,
+                severity: NOTIFICATION_SEVERITY_MAP.COMPLAINT_CREATED,
+                title: `New Complaint: ${complaint?.title}`,
+                message: `A new complaint "${complaint?.title}" has been submitted in your organization.`,
+                relatedEntityId: complaint?.id,
+                relatedEntityType: 'complaint',
+            });
+        }
         this.sendCreationEmails(orgId, complaint).catch((err) =>
             this.logger.error(`Failed to send complaint creation emails: ${err.message}`),
         );
@@ -176,6 +210,13 @@ export class ComplaintService {
 
         this.gateway.emitComplaintStatusChanged(orgId, {
             complaintId: updated.id, status: updated.status, resolvedById: updated.resolvedById,
+        });
+        const targetUserIds = complaint.targets.map(t => t.userId);
+        this.notificationService.dispatchToMany({
+            orgId, userIds: targetUserIds, type: NotificationType.COMPLAINT_STATUS_CHANGED,
+            severity: NOTIFICATION_SEVERITY_MAP.COMPLAINT_STATUS_CHANGED, title: `Complaint Status Changed: ${complaint.title}`,
+            message: `Your complaint "${complaint.title}" has been updated to ${updated.status}.`,
+            relatedEntityId: complaint.id, relatedEntityType: 'complaint',
         });
         this.sendStatusChangeEmails(updated).catch((err) =>
             this.logger.error(`Failed to send complaint status change emails: ${err.message}`),

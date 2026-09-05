@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Notification module (`NotificationModule`, `NotificationService`, `NotificationController`, `NotificationProcessor`) providing in app notifications dispatched via BullMQ, real time WebSocket delivery, and optional email forwarding through Resend when the organization has email preferences enabled
+- Notification REST API with paginated listing, read/unread toggling, deletion, and admin only email preference management endpoints
+- `dispatchBulk` method using BullMQ `addBulk` to enqueue multiple notification jobs in a single Redis round trip, replacing the previous per job sequential dispatch
+- `dispatchToMany` convenience method that fans out a single notification payload to multiple user IDs via `dispatchBulk`
+- Notification severity map (`NOTIFICATION_SEVERITY_MAP`) mapping every `NotificationType` to a `NotificationSeverity` for consistent severity assignment
+- Scheduled cron task (`NotificationCronTask`) with three automated detection jobs: deadline warnings for tasks due within 24 hours (every 10 minutes), missed target detection transitioning overdue targets to `MISSED` (every 10 minutes), and at risk target detection flagging targets within 3 days of deadline with below 50% progress (every hour)
+- Complaint notification integration dispatching `COMPLAINT_CREATED` to targets and admins, and `COMPLAINT_STATUS_CHANGED` on status transitions via `dispatchToMany`
+- Review notification integration dispatching `REVIEW_ASSIGNED` to eligible users on cycle activation
+- Task notification integration dispatching `TASK_ASSIGNED` and `TASK_COMPLETED` to relevant users
+- `emitNotification` method on `TaskGateway` for real time WebSocket delivery of notifications to individual user rooms
+- Unit test suites for `NotificationCronTask` (18 tests), `NotificationService` (22 tests), `NotificationProcessor` (3 tests), and notification constants (4 tests)
+
 - Recognition module (`RecognitionModule`, `RecognitionService`, `RecognitionController`) allowing supervisors, admins, and owners to give positive kudos to team and org members (see spec 0006)
 - Predefined recognition categories (`TEAMWORK`, `INNOVATION`, `LEADERSHIP`, `CUSTOMER_FOCUS`, `GOING_ABOVE_AND_BEYOND`, `OTHER`) with custom category support for `OTHER`
 - Public and private recognition visibility controls with paginated feed endpoints (`GET /recognition/feed`, `GET /recognition/my`)
@@ -70,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `TaskGateway` is no longer listed as a provider in `TaskModule` and `TargetModule`; it is now imported through `GatewayModule` to avoid duplicate Socket.io server instances
 - `DepartmentService` internal formatting condensed (no behavioural change)
+- `dispatchToMany` in `NotificationService` now delegates to `dispatchBulk` instead of issuing sequential `add` calls, reducing Redis round trips from N to 1
 
 ### Fixed
 - Ternary condition in `RecognitionService.create` where `customCategory` was validated with `dto.customCategory === RecognitionCategory.OTHER` rather than `dto.category === RecognitionCategory.OTHER`, which previously caused custom categories to always be saved as null (see spec 0006)
@@ -82,3 +95,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Department controller route changed from `/department` to `/departments` (plural) to follow REST conventions and match the Phase 2 API documentation
 - Department `findAll` endpoint changed from `GET /departments/all` to `GET /departments` to follow standard collection patterns
 - User `getAll` endpoint changed from `GET /users/all` to `GET /users` to match the same convention
+- Progress threshold in `handleTargetAtRiskDetection` compared a 0 to 1 ratio against 50 instead of 0.5, causing every target under 100% progress to be flagged as at risk. Corrected to `< 0.5`

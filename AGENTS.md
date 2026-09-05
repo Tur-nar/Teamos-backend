@@ -56,6 +56,7 @@ src/
 - Multi-step writes that must succeed/fail together → `prisma.$transaction()`.
 - Soft delete: explicit `deletedAt`, filtered manually (`where: { deletedAt: null }`) — pick one pattern, apply everywhere.
 - Complex aggregation → `$queryRaw` / `groupBy`, not multiple round-trips reduced in JS.
+- **No query inside a loop — this includes existence/duplicate checks, not just data fetches.** If a `for`/`.map()` body calls `findFirst`, `findUnique`, `count`, or `create`/`update` once per iteration, that's N+1 even when it's only checking "does this already exist" rather than fetching related data. Fix: pull the loop's ID list, run one batched query with `{ in: [...] }` (or one `groupBy`/`createMany`), build a `Map`/`Set` keyed by ID, then loop over that in memory with no further queries. `Promise.all()` around the same per-iteration query still N+1s the database — it only removes the sequential-latency cost, not the query count. Applies equally to list endpoints, cron jobs, and dedup/guard checks before a write.
 - Never hand-edit a generated migration. Backfills are a separate follow-up migration.
 - Set `connection_limit` explicitly in production `DATABASE_URL`.
 

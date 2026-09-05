@@ -6,6 +6,7 @@ import { PerformanceModule } from '../modules/performance/performance.module';
 import { ReviewModule } from '../modules/review/review.module';
 import { ComplaintModule } from '../modules/complaint/complaint.module';
 import { ComplaintCronTask } from './complaint.task';
+import { NotificationCronTask } from './notification.task';
 
 @Module({
     imports: [
@@ -15,6 +16,6 @@ import { ComplaintCronTask } from './complaint.task';
         ReviewModule,
         ComplaintModule
     ],
-    providers: [PerformanceCronTask, ComplaintCronTask],
+    providers: [PerformanceCronTask, ComplaintCronTask, NotificationCronTask],
 })
 export class SchedulerModule { }

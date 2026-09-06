@@ -7,6 +7,7 @@ import { ReviewModule } from '../modules/review/review.module';
 import { ComplaintModule } from '../modules/complaint/complaint.module';
 import { ComplaintCronTask } from './complaint.task';
 import { NotificationCronTask } from './notification.task';
+import { NotificationModule } from '../modules/notification/notification.module';
 
 @Module({
     imports: [
@@ -14,7 +15,8 @@ import { NotificationCronTask } from './notification.task';
         BullModule.registerQueue({ name: 'performance' }),
         PerformanceModule,
         ReviewModule,
-        ComplaintModule
+        ComplaintModule,
+        NotificationModule
     ],
     providers: [PerformanceCronTask, ComplaintCronTask, NotificationCronTask],
 })

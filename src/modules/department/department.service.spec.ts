@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DepartmentService } from './department.service';
 import { PrismaService } from '../../lib/prisma/prisma.service';
+import { AuditLogService } from '../../lib/audit/audit.service';
 import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 
 const mockPrisma = {
@@ -28,6 +29,7 @@ describe('DepartmentService', () => {
             providers: [
                 DepartmentService,
                 { provide: PrismaService, useValue: mockPrisma },
+                { provide: AuditLogService, useValue: { log: jest.fn() } },
             ],
         }).compile();
 

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Session, Query, Patch, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Session, Query, Patch, UseInterceptors, UploadedFiles, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { TaskService } from './task.service';
 import { Roles } from '../../lib/common/decorators/roles/roles.decorator';
 import { ResponseMessage } from '../../lib/common/decorators/response-message/response-message';
@@ -50,8 +51,14 @@ export class TaskController {
     @Put(':id')
     @Roles('supervisor', 'admin', 'owner')
     @ResponseMessage('Task updated successfully')
-    update(@CurrentOrg() orgId: string, @Param('id') taskId: string, @Body() dto: UpdateTaskDto) {
-        return this.taskService.update(orgId, taskId, dto)
+    update(
+        @CurrentOrg() orgId: string,
+        @Param('id') taskId: string,
+        @Body() dto: UpdateTaskDto,
+        @Session() session: nestjsBetterAuth.UserSession,
+        @Req() req: Request,
+    ) {
+        return this.taskService.update(orgId, taskId, dto, session.user.id, req.ip);
     }
 
     @Patch(':id/status')

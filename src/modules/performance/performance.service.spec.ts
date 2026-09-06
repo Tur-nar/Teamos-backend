@@ -607,7 +607,7 @@ describe('PerformanceService', () => {
             mockPrisma.performance.findUnique.mockResolvedValue(PERFORMANCE_FIXTURE);
             mockPrisma.performanceSnapshot.findUnique.mockResolvedValue(null);
 
-            const snapshotData = { id: 'snap-1', ...PERFORMANCE_FIXTURE };
+            const snapshotData = { ...PERFORMANCE_FIXTURE, id: 'snap-1' };
             mockPrisma.performanceSnapshot.create.mockResolvedValue(snapshotData);
 
             const result = await service.captureSnapshot(ORG_ID, USER_ID);

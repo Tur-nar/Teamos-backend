@@ -1,7 +1,8 @@
 import {
     Controller, Get, Post, Put, Delete, Param, Body,
-    Session, Query, UseInterceptors, UploadedFiles,
+    Session, Query, UseInterceptors, UploadedFiles, Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { TargetService } from './target.service';
 import { Roles } from '../../lib/common/decorators/roles/roles.decorator';
 import { ResponseMessage } from '../../lib/common/decorators/response-message/response-message';
@@ -74,8 +75,9 @@ export class TargetController {
     remove(
         @CurrentOrg() orgId: string, @Param('id') targetId: string,
         @Session() session: nestjsBetterAuth.UserSession, @CurrentRole() role: string,
+        @Req() req: Request,
     ) {
-        return this.targetService.remove(orgId, targetId, session.user.id, role);
+        return this.targetService.remove(orgId, targetId, session.user.id, role, req.ip);
     }
 
 

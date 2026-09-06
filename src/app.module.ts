@@ -23,6 +23,9 @@ import { ReviewModule } from './modules/review/review.module';
 import { RecognitionModule } from './modules/recognition/recognition.module';
 import { ComplaintModule } from './modules/complaint/complaint.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { AuditModule } from './lib/audit/audit.module';
+import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -55,6 +58,9 @@ import { NotificationModule } from './modules/notification/notification.module';
     RecognitionModule,
     ComplaintModule,
     NotificationModule,
+    AuditModule,
+    AuditLogModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService, ResponseInterceptor, RolesGuard],

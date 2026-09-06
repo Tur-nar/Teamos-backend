@@ -16,6 +16,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TASK_EVENTS, TaskCreatedEvent, TaskStatusChangedEvent, TaskDeletedEvent, TaskReassignedEvent } from '../../lib/common/events/task.events';
 import { NotificationService } from '../notification/notification.service';
 import { NOTIFICATION_SEVERITY_MAP } from '../notification/notification.constants';
+import { AuditLogService } from '../../lib/audit/audit.service';
+import { AUDIT_ACTIONS } from '../../lib/audit/audit.action';
 
 
 @Injectable()
@@ -25,7 +27,8 @@ export class TaskService {
         private readonly prisma: PrismaService,
         private readonly taskGateway: TaskGateway,
         private readonly eventEmitter: EventEmitter2,
-        private readonly notificationService: NotificationService
+        private readonly notificationService: NotificationService,
+        private readonly auditLog: AuditLogService,
     ) { }
 
     async create(orgId: string, assignedById: string, dto: CreateTaskDto) {
@@ -131,7 +134,7 @@ export class TaskService {
         return task;
     }
 
-    async update(orgId: string, taskId: string, dto: UpdateTaskDto) {
+    async update(orgId: string, taskId: string, dto: UpdateTaskDto, actorId?: string, ipAddress?: string) {
         const task = await this.getTaskOrThrow(orgId, taskId);
 
         if (dto.assignedToId && task.assignedToId !== dto.assignedToId) {
@@ -193,6 +196,17 @@ export class TaskService {
         if (!updatedTask) throw new Error("Failed to update task immediately after update");
         if (dto.assignedToId && task.assignedToId !== dto.assignedToId) {
             this.eventEmitter.emit(TASK_EVENTS.REASSIGNED, new TaskReassignedEvent(orgId, dto.assignedToId, task.assignedToId));
+            if (actorId) {
+                await this.auditLog.log({
+                    orgId,
+                    userId: actorId,
+                    action: AUDIT_ACTIONS.TASK_REASSIGNED,
+                    targetId: taskId,
+                    targetType: 'task',
+                    metadata: { previousAssigneeId: task.assignedToId, newAssigneeId: dto.assignedToId },
+                    ipAddress,
+                });
+            }
         }
         this.taskGateway.emitTaskUpdated(orgId, updatedTask);
         if (dto.assignedToId && task.assignedToId !== dto.assignedToId) {

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Delete, Param, Query, Body, Session } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, Session, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { ReviewService } from './review.service';
 import { Roles } from '../../lib/common/decorators/roles/roles.decorator';
 import { CurrentOrg } from '../../lib/common/decorators/current-org/current-org.decorator';
@@ -107,21 +108,45 @@ export class ReviewController {
     @Post('review-cycles/:cycleId/activate')
     @Roles('admin', 'owner')
     @ResponseMessage('Review cycle activated successfully')
-    activateCycle(@CurrentOrg() orgId: string, @Param('cycleId') id: string) {
+    activateCycle(
+        @CurrentOrg() orgId: string,
+        @Param('cycleId') id: string,
+        @Session() session?: nestjsBetterAuth.UserSession,
+        @Req() req?: Request,
+    ) {
+        if (session?.user?.id || req?.ip) {
+            return this.reviewService.activateCycle(orgId, id, session?.user?.id, req?.ip);
+        }
         return this.reviewService.activateCycle(orgId, id);
     }
 
     @Post('review-cycles/:cycleId/calibrate')
     @Roles('admin', 'owner')
     @ResponseMessage('Review cycle moved to calibration')
-    transitionToCalibrating(@CurrentOrg() orgId: string, @Param('cycleId') id: string) {
+    transitionToCalibrating(
+        @CurrentOrg() orgId: string,
+        @Param('cycleId') id: string,
+        @Session() session?: nestjsBetterAuth.UserSession,
+        @Req() req?: Request,
+    ) {
+        if (session?.user?.id || req?.ip) {
+            return this.reviewService.transitionToCalibrating(orgId, id, session?.user?.id, req?.ip);
+        }
         return this.reviewService.transitionToCalibrating(orgId, id);
     }
 
     @Post('review-cycles/:cycleId/complete')
     @Roles('admin', 'owner')
     @ResponseMessage('Review cycle completed successfully')
-    completeCycle(@CurrentOrg() orgId: string, @Param('cycleId') id: string) {
+    completeCycle(
+        @CurrentOrg() orgId: string,
+        @Param('cycleId') id: string,
+        @Session() session?: nestjsBetterAuth.UserSession,
+        @Req() req?: Request,
+    ) {
+        if (session?.user?.id || req?.ip) {
+            return this.reviewService.completeCycle(orgId, id, session?.user?.id, req?.ip);
+        }
         return this.reviewService.completeCycle(orgId, id);
     }
 
@@ -258,7 +283,11 @@ export class ReviewController {
     finalizeSession(
         @CurrentOrg() orgId: string, @Session() session: nestjsBetterAuth.UserSession,
         @Param('id') id: string,
+        @Req() req?: Request,
     ) {
+        if (req?.ip) {
+            return this.reviewService.finalizeSession(orgId, session.user.id, id, req.ip);
+        }
         return this.reviewService.finalizeSession(orgId, session.user.id, id);
     }
 }

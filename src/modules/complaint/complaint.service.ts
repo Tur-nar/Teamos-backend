@@ -10,6 +10,9 @@ import { UpdateComplaintStatusDto } from './dto/update-complaint-status.dto';
 import { NotificationService } from '../notification/notification.service';
 import { NOTIFICATION_SEVERITY_MAP } from '../notification/notification.constants';
 
+import { AuditLogService } from '../../lib/audit/audit.service';
+import { AUDIT_ACTIONS } from '../../lib/audit/audit.action';
+
 const VALID_TRANSITIONS: Record<string, ComplaintStatus[]> = {
     OPEN: [ComplaintStatus.IN_REVIEW],
     IN_REVIEW: [ComplaintStatus.RESOLVED, ComplaintStatus.DISMISSED],
@@ -24,6 +27,7 @@ export class ComplaintService {
         private readonly mailService: MailService,
         private readonly gateway: TaskGateway,
         private readonly notificationService: NotificationService,
+        private readonly auditLog: AuditLogService,
     ) { }
 
     async create(orgId: string, userId: string, dto: CreateComplaintDto) {
@@ -161,7 +165,7 @@ export class ComplaintService {
         return { total, open, inReview, late, resolved, dismissed };
     }
 
-    async updateStatus(orgId: string, complaintId: string, userId: string, userRole: Role, dto: UpdateComplaintStatusDto) {
+    async updateStatus(orgId: string, complaintId: string, userId: string, userRole: Role, dto: UpdateComplaintStatusDto, ipAddress?: string) {
         const complaint = await this.prisma.complaint.findFirst({
             where: { id: complaintId, organizationId: orgId },
             include: {
@@ -207,6 +211,28 @@ export class ComplaintService {
                 targets: { include: { user: { select: { id: true, name: true, email: true, image: true } } } },
             },
         });
+
+        if (dto.status === ComplaintStatus.RESOLVED) {
+            await this.auditLog.log({
+                orgId,
+                userId,
+                action: AUDIT_ACTIONS.COMPLAINT_RESOLVED,
+                targetId: complaintId,
+                targetType: 'complaint',
+                metadata: { resolution: dto.resolution },
+                ipAddress,
+            });
+        } else if (dto.status === ComplaintStatus.DISMISSED) {
+            await this.auditLog.log({
+                orgId,
+                userId,
+                action: AUDIT_ACTIONS.COMPLAINT_DISMISSED,
+                targetId: complaintId,
+                targetType: 'complaint',
+                metadata: { reason: dto.resolution },
+                ipAddress,
+            });
+        }
 
         this.gateway.emitComplaintStatusChanged(orgId, {
             complaintId: updated.id, status: updated.status, resolvedById: updated.resolvedById,

@@ -4,6 +4,7 @@ import { PrismaService } from 'src/lib/prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { TaskGateway } from '../../gateway/task.gateway';
 import { ForbiddenException, BadRequestException } from '@nestjs/common';
+import { AuditLogService } from '../../lib/audit/audit.service';
 
 // ── Helpers ──
 
@@ -119,11 +120,13 @@ describe('TargetService', () => {
   let prisma: ReturnType<typeof createMockPrisma>;
   let upload: ReturnType<typeof createMockUpload>;
   let gateway: ReturnType<typeof createMockGateway>;
+  let auditLog: { log: jest.Mock };
 
   beforeEach(async () => {
     prisma = createMockPrisma();
     upload = createMockUpload();
     gateway = createMockGateway();
+    auditLog = { log: jest.fn().mockResolvedValue({}) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -131,6 +134,7 @@ describe('TargetService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: upload },
         { provide: TaskGateway, useValue: gateway },
+        { provide: AuditLogService, useValue: auditLog },
       ],
     }).compile();
 

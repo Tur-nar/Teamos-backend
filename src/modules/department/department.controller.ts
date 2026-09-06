@@ -1,12 +1,7 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Put,
-    Delete,
-    Param,
-    Body,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Req } from '@nestjs/common';
+import type { Request } from 'express';
+import { Session } from '@thallesp/nestjs-better-auth';
+import type { UserSession } from '@thallesp/nestjs-better-auth';
 import { DepartmentService } from './department.service';
 import { CurrentOrg } from '../../lib/common/decorators/current-org/current-org.decorator';
 import { Roles } from '../../lib/common/decorators/roles/roles.decorator';
@@ -43,8 +38,12 @@ export class DepartmentController {
     @Put(':id')
     @Roles('owner', 'admin')
     @ResponseMessage('Department updated successfully')
-    update(@CurrentOrg() orgId: string, @Param('id') id: string, @Body() dto: UpdateDepartmentDto) {
-        return this.departmentService.update(orgId, id, dto);
+    update(
+        @CurrentOrg() orgId: string, @Param('id') id: string,
+        @Body() dto: UpdateDepartmentDto, @Session() session: UserSession,
+        @Req() req: Request,
+    ) {
+        return this.departmentService.update(orgId, id, dto, session.user.id, req.ip);
     }
 
     @Delete(':id')

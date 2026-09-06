@@ -7,8 +7,8 @@ import {
     NotFoundException, BadRequestException, ConflictException,
     ForbiddenException, ServiceUnavailableException,
 } from '@nestjs/common';
-
-// ── Mocks ──────────────────────────────────────────────────────────
+import { NotificationService } from '../notification/notification.service';
+import { AuditLogService } from '../../lib/audit/audit.service';
 
 const mockPrisma = {
     member: {
@@ -83,6 +83,15 @@ const mockLlmService = {
     generateText: jest.fn(),
 };
 
+const mockNotificationService = {
+    dispatch: jest.fn(),
+    dispatchToMany: jest.fn(),
+};
+
+const mockAuditLogService = {
+    log: jest.fn().mockResolvedValue({}),
+};
+
 // ── Fixtures ───────────────────────────────────────────────────────
 
 const ORG_ID = 'org-1';
@@ -146,6 +155,8 @@ describe('ReviewService', () => {
                 { provide: PrismaService, useValue: mockPrisma },
                 { provide: TaskGateway, useValue: mockTaskGateway },
                 { provide: LlmService, useValue: mockLlmService },
+                { provide: NotificationService, useValue: mockNotificationService },
+                { provide: AuditLogService, useValue: mockAuditLogService },
             ],
         }).compile();
 

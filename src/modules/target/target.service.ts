@@ -8,6 +8,8 @@ import { CreateEntryDto } from './dto/create-entry.dto';
 import { TaskGateway } from '../../gateway/task.gateway';
 import { outranks, ROLE_RANK } from '../../lib/common/constants/role-rank';
 import { Target, TargetStatus, TargetType, Prisma } from '@prisma/client';
+import { AuditLogService } from '../../lib/audit/audit.service';
+import { AUDIT_ACTIONS } from '../../lib/audit/audit.action';
 
 @Injectable()
 export class TargetService {
@@ -15,6 +17,7 @@ export class TargetService {
         private prisma: PrismaService,
         private upload: UploadService,
         private taskGateway: TaskGateway,
+        private auditLog: AuditLogService,
     ) { }
 
     async create(orgId: string, createdById: string, callerRole: string, dto: CreateTargetDto) {
@@ -227,7 +230,7 @@ export class TargetService {
         return updated;
     }
 
-    async remove(orgId: string, targetId: string, userId: string, callerRole: string) {
+    async remove(orgId: string, targetId: string, userId: string, callerRole: string, ipAddress?: string) {
         const target = await this.prisma.target.findFirst({
             where: { id: targetId, organizationId: orgId, },
             include: { createdBy: true, _count: { select: { children: true } } }
@@ -248,6 +251,16 @@ export class TargetService {
         await this.prisma.target.delete({
             where: { id: targetId, organizationId: orgId, }
         })
+
+        await this.auditLog.log({
+            orgId,
+            userId,
+            action: AUDIT_ACTIONS.TARGET_DELETED,
+            targetId,
+            targetType: 'target',
+            metadata: { title: target.title, type: target.type },
+            ipAddress,
+        });
 
         this.taskGateway.emitTargetDeleted(orgId, targetId);
         return { deleted: true };

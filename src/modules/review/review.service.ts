@@ -15,6 +15,8 @@ import { CreateNominationDto } from './dto/create-nomination.dto';
 import { AdjustCalibrationDto } from './dto/adjust-calibration.dto';
 import { NotificationService } from '../notification/notification.service';
 import { NOTIFICATION_SEVERITY_MAP } from '../notification/notification.constants';
+import { AuditLogService } from '../../lib/audit/audit.service';
+import { AUDIT_ACTIONS } from '../../lib/audit/audit.action';
 
 @Injectable()
 export class ReviewService {
@@ -25,6 +27,7 @@ export class ReviewService {
         private readonly taskGateway: TaskGateway,
         private readonly llmService: LlmService,
         private readonly notificationService: NotificationService,
+        private readonly auditLog: AuditLogService,
     ) { }
 
     async createTemplate(orgId: string, userId: string, dto: CreateReviewTemplateDto) {
@@ -194,7 +197,7 @@ export class ReviewService {
         return await this.prisma.reviewCycle.delete({ where: { id: cycleId } })
     }
 
-    async activateCycle(orgId: string, cycleId: string) {
+    async activateCycle(orgId: string, cycleId: string, actorId?: string, ipAddress?: string) {
         const cycle = await this.validateCycle(orgId, cycleId);
         if (cycle.status !== 'DRAFT') throw new ConflictException("Cycle must be in draft status to activate");
 
@@ -255,18 +258,45 @@ export class ReviewService {
                 relatedEntityId: cycle.id, relatedEntityType: 'reviewCycle',
             });
         }
+
+        if (actorId) {
+            await this.auditLog.log({
+                orgId,
+                userId: actorId,
+                action: AUDIT_ACTIONS.REVIEW_CYCLE_ACTIVATED,
+                targetId: cycleId,
+                targetType: 'reviewCycle',
+                metadata: { cycleName: cycle.name },
+                ipAddress,
+            });
+        }
+
         return result.cycle;
     }
 
-    async transitionToCalibrating(orgId: string, cycleId: string) {
+    async transitionToCalibrating(orgId: string, cycleId: string, actorId?: string, ipAddress?: string) {
         const cycle = await this.validateCycle(orgId, cycleId);
         if (cycle.status !== 'ACTIVE') throw new ConflictException("Cycle must be in active status to transition to CALIBRATING");
-        return this.prisma.reviewCycle.update({
+        const updated = await this.prisma.reviewCycle.update({
             where: { id: cycleId }, data: { status: 'CALIBRATING' }
         });
+
+        if (actorId) {
+            await this.auditLog.log({
+                orgId,
+                userId: actorId,
+                action: AUDIT_ACTIONS.REVIEW_CYCLE_CALIBRATING,
+                targetId: cycleId,
+                targetType: 'reviewCycle',
+                metadata: { cycleName: cycle.name },
+                ipAddress,
+            });
+        }
+
+        return updated;
     }
 
-    async completeCycle(orgId: string, cycleId: string) {
+    async completeCycle(orgId: string, cycleId: string, actorId?: string, ipAddress?: string) {
         const cycle = await this.validateCycle(orgId, cycleId);
         if (cycle.status !== 'CALIBRATING') throw new ConflictException("Cycle must be in CALIBRATING status to be completed");
 
@@ -275,7 +305,7 @@ export class ReviewService {
         });
         if (unfinializedSessions) throw new ConflictException("All calibration sessions must be finalized before completing the cycle");
 
-        return this.prisma.$transaction(async (tx) => {
+        const completedCycle = await this.prisma.$transaction(async (tx) => {
             const sessions = await tx.calibrationSession.findMany({
                 where: { reviewCycleId: cycleId, organizationId: orgId, status: 'finalized' },
             });
@@ -295,7 +325,21 @@ export class ReviewService {
                 }
             }
             return tx.reviewCycle.update({ where: { id: cycleId }, data: { status: 'COMPLETED' } });
-        })
+        });
+
+        if (actorId) {
+            await this.auditLog.log({
+                orgId,
+                userId: actorId,
+                action: AUDIT_ACTIONS.REVIEW_CYCLE_COMPLETED,
+                targetId: cycleId,
+                targetType: 'reviewCycle',
+                metadata: { cycleName: cycle.name },
+                ipAddress,
+            });
+        }
+
+        return completedCycle;
     }
 
     async getMyReviews(orgId: string, userId: string, cycleId: string) {
@@ -660,7 +704,7 @@ export class ReviewService {
         });
     }
 
-    async finalizeSession(orgId: string, userId: string, sessionId: string) {
+    async finalizeSession(orgId: string, userId: string, sessionId: string, ipAddress?: string) {
         const session = await this.getCalibrationSession(orgId, sessionId)
         if (session.facilitatorId !== userId) {
             const membership = await this.prisma.member.findFirst({
@@ -691,7 +735,7 @@ export class ReviewService {
         }
         if (missing.length > 0) throw new BadRequestException(`Cannot finalize: ${missing.join(', ')}`);
 
-        return this.prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
             for (const [uid, data] of Object.entries(scores)) {
                 await tx.performance.upsert({
                     where: { organizationId_userId: { organizationId: orgId, userId: uid } },
@@ -712,6 +756,16 @@ export class ReviewService {
             });
             return updated;
         });
+
+        await this.auditLog.log({
+            orgId, userId,
+            action: AUDIT_ACTIONS.CALIBRATION_FINALIZED,
+            targetId: sessionId, targetType: 'calibrationSession',
+            metadata: { departmentId: session.departmentId, adjustedCount: Object.keys(scores).length },
+            ipAddress,
+        });
+
+        return result;
     }
 
     async markOverdueReviews() {

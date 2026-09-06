@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Executive analytics dashboard module (`AnalyticsModule`, `AnalyticsService`, `AnalyticsController`) aggregating organizational health across tasks, performance trends, complaints, targets, and recognitions with tiered role scoping (see spec 0009)
+- Audit log module (`AuditLogModule`, `AuditLogQueryService`, `AuditLogController`) and global `AuditModule` (`AuditLogService`) providing immutable event logging for sensitive administrative actions, user changes, and CSV export capabilities (see spec 0009)
+- Prisma `AuditLog` model with composite indexes on `(organizationId, createdAt)`, `(organizationId, action)`, and `(organizationId, userId)` for performant query filtering
+- Audit log REST API endpoints: `GET /audit-logs` for paginated and filtered log queries, and `GET /audit-logs/export` for RFC-4180 compliant CSV downloads
+- Analytics REST API endpoints providing specialized metric slices: `GET /analytics/dashboard`, `GET /analytics/task-metrics`, `GET /analytics/performance-trends`, `GET /analytics/department-comparison`, `GET /analytics/complaint-metrics`, `GET /analytics/target-progress`, `GET /analytics/recognition-summary`, and `GET /analytics/member-summary`
+- Non blocking audit log integration wired into `DepartmentService` (head changes), `ComplaintService` (resolutions and dismissals), `TargetService` (deletions), `TaskService` (reassignments), and `ReviewService` (cycle activation, calibration, completion, and session finalization)
+- Comprehensive test suites for `AuditLogService`, `AuditLogQueryService`, `AuditLogController`, `AnalyticsService`, and `AnalyticsController` bringing the test suite to 507 passing tests across 35 suites
 - Notification module (`NotificationModule`, `NotificationService`, `NotificationController`, `NotificationProcessor`) providing in app notifications dispatched via BullMQ, real time WebSocket delivery, and optional email forwarding through Resend when the organization has email preferences enabled
 - Notification REST API with paginated listing, read/unread toggling, deletion, and admin only email preference management endpoints
 - `dispatchBulk` method using BullMQ `addBulk` to enqueue multiple notification jobs in a single Redis round trip, replacing the previous per job sequential dispatch

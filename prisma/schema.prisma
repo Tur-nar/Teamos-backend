@@ -48,6 +48,7 @@ model User {
   complaintsResolved              Complaint[]                   @relation("ComplaintResolvedBy")
   complaintsTargeted              ComplaintTarget[]             @relation("ComplaintTarget")
   notifications                   Notification[]
+  auditLogs                       AuditLog[]                    
 
   @@unique([email])
   @@map("user")
@@ -127,6 +128,7 @@ model Organization {
   recognitions              Recognition[]
   complaints                Complaint[]
   notifications             Notification[]
+  auditLogs                 AuditLog[]
 
   @@unique([slug])
   @@map("organization")
@@ -714,4 +716,25 @@ enum NotificationSeverity {
   ERROR
   SUCCESS
   CRITICAL
+}
+
+model AuditLog {
+  id                          String                      @id @default(uuid())
+  organizationId              String
+  userId                      String
+  action                      String
+  targetId                    String?
+  targetType                  String?
+  metadata                    Json?
+  ipAddress                   String?
+  createdAt                   DateTime                  @default(now())
+
+  organization                Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId])
+  @@index([userId, action])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_log")
 }

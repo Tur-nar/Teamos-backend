@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Session, Get, Query, Delete, Param, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Session, Get, Query, Delete, Param, Patch, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { CurrentOrg } from '../../lib/common/decorators/current-org/current-org.decorator';
 import { CurrentRole } from '../../lib/common/decorators/roles/current-role.decorator';
 import * as nestjsBetterAuth from '@thallesp/nestjs-better-auth';
@@ -55,8 +56,12 @@ export class ComplaintController {
         @CurrentOrg() orgId: string, @Session() session: nestjsBetterAuth.UserSession,
         @CurrentRole() role: Role, @Param('complaintId') complaintId: string,
         @Body() dto: UpdateComplaintStatusDto,
+        @Req() req?: Request,
     ) {
-        return this.complaintService.updateStatus(orgId, complaintId, session.user.id, role, dto,);
+        if (req?.ip) {
+            return this.complaintService.updateStatus(orgId, complaintId, session.user.id, role, dto, req.ip);
+        }
+        return this.complaintService.updateStatus(orgId, complaintId, session.user.id, role, dto);
     }
 
     @Delete(':complaintId')

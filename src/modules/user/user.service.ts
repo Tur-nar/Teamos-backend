@@ -15,9 +15,7 @@ export class UserService {
                 members: {
                     select: {
                         id: true, role: true, organizationId: true,
-                        organization: {
-                            select: { id: true, name: true, slug: true, logo: true }
-                        }
+                        organization: { select: { id: true, name: true, slug: true, logo: true } }
                     }
                 }
             },
@@ -94,13 +92,9 @@ export class UserService {
             .map((m) => {
                 const profile = profileMap.get(m.userId);
                 return {
-                    memberId: m.id,
-                    role: m.role,
-                    user: m.user,
+                    memberId: m.id, role: m.role, user: m.user,
                     profile: profile ? {
-                        supervisorId: profile.supervisorId,
-                        status: profile.status,
-                        department: profile.department,
+                        supervisorId: profile.supervisorId, status: profile.status, department: profile.department,
                     } : null,
                 };
             });

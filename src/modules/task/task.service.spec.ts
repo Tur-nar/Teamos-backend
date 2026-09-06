@@ -5,6 +5,8 @@ import { UploadService } from '../upload/upload.service';
 import { TaskGateway } from '../../gateway/task.gateway';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { NotificationService } from '../notification/notification.service';
+import { AuditLogService } from '../../lib/audit/audit.service';
 
 // ── Mocks ──────────────────────────────────────────────────────────
 
@@ -68,6 +70,15 @@ const mockEventEmitter = {
     emit: jest.fn(),
 };
 
+const mockNotificationService = {
+    create: jest.fn().mockResolvedValue({}),
+    dispatch: jest.fn().mockResolvedValue({}),
+};
+
+const mockAuditLogService = {
+    log: jest.fn().mockResolvedValue({}),
+};
+
 // ── Fixtures ───────────────────────────────────────────────────────
 
 const ORG_ID = 'org-1';
@@ -98,6 +109,8 @@ describe('TaskService', () => {
                 { provide: UploadService, useValue: mockUploadService },
                 { provide: TaskGateway, useValue: mockTaskGateway },
                 { provide: EventEmitter2, useValue: mockEventEmitter },
+                { provide: NotificationService, useValue: mockNotificationService },
+                { provide: AuditLogService, useValue: mockAuditLogService },
             ],
         }).compile();
 

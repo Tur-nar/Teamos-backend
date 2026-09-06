@@ -269,26 +269,22 @@ describe('NotificationCronTask', () => {
       expect(mockNotificationService.dispatchBulk).not.toHaveBeenCalled();
     });
 
-    // BUG: progress is computed as currentValue/targetValue (a 0 to 1 ratio)
-    // but compared against 50 as if it were a percentage. Every target with
-    // progress < 1.0 passes the filter. The threshold should be 0.5, not 50.
-    // This test documents the *actual* behavior, not the intended behavior.
-    it('does NOT filter out targets at 50% progress due to ratio vs percentage bug', async () => {
+    it('filters out targets at 50% progress since threshold is strictly less than 50%', async () => {
       const target = buildTarget({
         currentValue: 50,
         targetValue: 100,
         status: TargetStatus.ON_TRACK,
       });
       mockPrisma.target.findMany.mockResolvedValue([target]);
-      mockPrisma.target.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.target.updateMany.mockResolvedValue({ count: 0 });
       mockPrisma.notification.findMany.mockResolvedValue([]);
       mockNotificationService.dispatchBulk.mockResolvedValue(undefined);
 
       await cronTask.handleTargetAtRiskDetection();
 
-      // 50/100 = 0.5 ratio, and 0.5 < 50 is true, so it still qualifies
-      expect(mockPrisma.target.updateMany).toHaveBeenCalled();
-      expect(mockNotificationService.dispatchBulk).toHaveBeenCalledTimes(1);
+      // 50/100 = 0.5 ratio, and 0.5 < 0.5 is false, so it does not qualify as at-risk
+      expect(mockPrisma.target.updateMany).not.toHaveBeenCalled();
+      expect(mockNotificationService.dispatchBulk).not.toHaveBeenCalled();
     });
 
     it('treats targets with targetValue 0 as 0% progress (edge case)', async () => {

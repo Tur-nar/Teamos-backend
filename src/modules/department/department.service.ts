@@ -1,11 +1,16 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../lib/prisma/prisma.service';
+import { AuditLogService } from '../../lib/audit/audit.service';
+import { AUDIT_ACTIONS } from '../../lib/audit/audit.action';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 
 @Injectable()
 export class DepartmentService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly auditLog: AuditLogService,
+    ) { }
 
     async create(orgId: string, dto: CreateDepartmentDto) {
         const existing = await this.prisma.department.findUnique({
@@ -72,7 +77,7 @@ export class DepartmentService {
         };
     }
 
-    async update(orgId: string, id: string, dto: UpdateDepartmentDto) {
+    async update(orgId: string, id: string, dto: UpdateDepartmentDto, actorId?: string, ipAddress?: string) {
         const department = await this.prisma.department.findUnique({
             where: { organizationId: orgId, id }
         })
@@ -94,24 +99,26 @@ export class DepartmentService {
             await this.validateOrgMember(orgId, dto.headId)
         }
 
-        return this.prisma.department.update({
+        const updatedDepartment = await this.prisma.department.update({
             where: { id },
             data: dto,
             include: {
-                staff: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                image: true,
-                            }
-                        }
-                    }
-                }
+                staff: { include: { user: { select: { id: true, name: true, email: true, image: true, } } } },
             }
-        })
+        });
+
+        if (dto.headId && dto.headId !== department.headId && actorId) {
+            await this.auditLog.log({
+                orgId,
+                userId: actorId,
+                action: AUDIT_ACTIONS.DEPARTMENT_HEAD_CHANGED,
+                targetId: department.id,
+                targetType: 'department',
+                metadata: { previousHeadId: department.headId, newHeadId: dto.headId },
+                ipAddress,
+            });
+        }
+        return updatedDepartment;
     }
 
     async remove(orgId: string, id: string) {

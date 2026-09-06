@@ -5,6 +5,8 @@ import { MailService } from '../../lib/mail/mail.service';
 import { TaskGateway } from '../../gateway/task.gateway';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ComplaintCategory, ComplaintStatus, Priority, Role } from '@prisma/client';
+import { NotificationService } from '../notification/notification.service';
+import { AuditLogService } from '../../lib/audit/audit.service';
 
 const mockPrisma = {
   userProfile: {
@@ -71,6 +73,14 @@ describe('ComplaintService', () => {
         {
           provide: TaskGateway,
           useValue: mockTaskGateway,
+        },
+        {
+          provide: NotificationService,
+          useValue: { dispatch: jest.fn(), dispatchToMany: jest.fn() },
+        },
+        {
+          provide: AuditLogService,
+          useValue: { log: jest.fn() },
         },
       ],
     }).compile();

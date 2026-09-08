@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException }
 import { PrismaService } from '../../lib/prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ReassignTeamDto } from './dto/reassign-team.dto';
+import { UpdateOrganizationBrandingDto } from './dto/updateOrganizationBrandingDto';
 
 @Injectable()
 export class UserService {
@@ -33,9 +34,7 @@ export class UserService {
                 members: {
                     select: {
                         id: true, role: true, organizationId: true,
-                        organization: {
-                            select: { id: true, name: true, slug: true, logo: true }
-                        }
+                        organization: { select: { id: true, name: true, slug: true, logo: true } }
                     }
                 }
             },
@@ -53,11 +52,7 @@ export class UserService {
 
         const activeMembership = user.members.find((m) => m.organizationId === orgId)
 
-        return {
-            ...user,
-            activeRole: activeMembership?.role ?? null,
-            profile
-        };
+        return { ...user, activeRole: activeMembership?.role ?? null, profile };
     }
 
     async findAllMembersOfOrganization(orgId: string, filters?: {
@@ -213,5 +208,26 @@ export class UserService {
             data: { onboarded: true },
         });
         return { onboarded: true };
+    }
+
+    async getBranding(orgId: string) {
+        const organization = await this.prisma.organization.findUnique({
+            where: { id: orgId }, select: { brandColor: true, }
+        });
+        if (!organization) throw new NotFoundException('Organization not found');
+        return { brandColor: organization?.brandColor ?? null };
+    }
+
+    async updateOrganizationBranding(orgId: string, dto: UpdateOrganizationBrandingDto) {
+        const organization = await this.prisma.organization.findUnique({
+            where: { id: orgId }, select: { brandColor: true, }
+        });
+        if (!organization) throw new NotFoundException('Organization not found');
+        if (dto.brandColor === organization.brandColor) {
+            throw new BadRequestException('Brand color is already set to this color');
+        }
+        return this.prisma.organization.update({
+            where: { id: orgId }, data: { brandColor: dto.brandColor ?? '' },
+        });
     }
 }

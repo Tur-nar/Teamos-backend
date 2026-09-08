@@ -15,6 +15,8 @@ const mockUserService = {
     getTeam: jest.fn(),
     updateProfile: jest.fn(),
     reassignTeam: jest.fn(),
+    completeOnboarding: jest.fn(),
+    updateOrganizationBranding: jest.fn(),
 };
 
 describe('UserController', () => {
@@ -126,6 +128,33 @@ describe('UserController', () => {
 
             expect(mockUserService.reassignTeam).toHaveBeenCalledWith('org-1', 'sup-1', dto);
             expect(result.reassignedCount).toBe(5);
+        });
+    });
+
+    describe('completeOnboarding', () => {
+        it('delegates to userService.completeOnboarding with session user id', async () => {
+            const session = { user: { id: 'u1' } } as any;
+            mockUserService.completeOnboarding.mockResolvedValue({ onboarded: true });
+
+            const result = await controller.completeOnboarding(session);
+
+            expect(mockUserService.completeOnboarding).toHaveBeenCalledWith('u1');
+            expect(result).toEqual({ onboarded: true });
+        });
+    });
+
+    describe('updateOrganizationBranding', () => {
+        it('delegates to userService.updateOrganizationBranding with orgId and dto', async () => {
+            const dto = { brandColor: '#2563EB' };
+            mockUserService.updateOrganizationBranding.mockResolvedValue({
+                id: 'org-1',
+                brandColor: '#2563EB',
+            });
+
+            const result = await controller.updateOrganizationBranding('org-1', dto as any);
+
+            expect(mockUserService.updateOrganizationBranding).toHaveBeenCalledWith('org-1', dto);
+            expect(result.brandColor).toBe('#2563EB');
         });
     });
 });

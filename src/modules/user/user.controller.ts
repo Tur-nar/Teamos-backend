@@ -7,6 +7,7 @@ import { ResponseMessage } from '../../lib/common/decorators/response-message/re
 import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ReassignTeamDto } from './dto/reassign-team.dto';
+import { UpdateOrganizationBrandingDto } from './dto/updateOrganizationBrandingDto';
 
 @Controller('users')
 export class UserController {
@@ -53,8 +54,7 @@ export class UserController {
     @Roles('owner', 'admin', 'supervisor')
     @ResponseMessage('Team retrieved successfully')
     getTeam(
-        @CurrentOrg() orgId: string,
-        @Param('id') supervisorId: string,
+        @CurrentOrg() orgId: string, @Param('id') supervisorId: string,
     ) {
         return this.userService.getTeam(orgId, supervisorId);
     }
@@ -63,8 +63,7 @@ export class UserController {
     @Roles('owner', 'admin')
     @ResponseMessage('Profile updated successfully')
     updateProfile(
-        @CurrentOrg() orgId: string,
-        @Param('id') targetUserId: string,
+        @CurrentOrg() orgId: string, @Param('id') targetUserId: string,
         @Body() dto: UpdateProfileDto,
     ) {
         return this.userService.updateProfile(orgId, targetUserId, dto);
@@ -74,10 +73,24 @@ export class UserController {
     @Roles('owner', 'admin')
     @ResponseMessage('Team reassigned successfully')
     reassignTeam(
-        @CurrentOrg() orgId: string,
-        @Param('id') currentSupervisorId: string,
+        @CurrentOrg() orgId: string, @Param('id') currentSupervisorId: string,
         @Body() dto: ReassignTeamDto,
     ) {
         return this.userService.reassignTeam(orgId, currentSupervisorId, dto);
+    }
+
+    @Get('organization-branding')
+    @ResponseMessage('Organization brand color retrieved successfully')
+    getBranding(@CurrentOrg() orgId: string) {
+        return this.userService.getBranding(orgId);
+    }
+
+    @Patch('organization-branding')
+    @Roles('owner', 'admin')
+    @ResponseMessage('Organization brand color updated successfully')
+    updateOrganizationBranding(
+        @CurrentOrg() orgId: string, @Body() dto: UpdateOrganizationBrandingDto,
+    ) {
+        return this.userService.updateOrganizationBranding(orgId, dto);
     }
 }

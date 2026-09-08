@@ -111,6 +111,7 @@ model Organization {
   logo                      String?
   createdAt                 DateTime
   metadata                  String?
+  brandColor                String?
   notificationEmailPrefs    Json                  @default("[\"OVERDUE_ALERT\", \"DEADLINE_WARNING\", \"COMPLAINT_CREATED\", \"TARGET_MISSED\"]")
   
   members                   Member[]

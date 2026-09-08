@@ -62,6 +62,17 @@ export const auth = betterAuth({
             membershipLimit: 100, // members per org - raise for enterprise plans
             creatorRole: 'owner',
             invitationExpiresIn: 60 * 60 * 24, // 1 day
+            schema: {
+                organization: {
+                    additionalFields: {
+                        brandColor: {
+                            type: "string",
+                            optional: true,
+                            input: true,
+                        }
+                    }
+                }
+            },
             sendInvitationEmail: async ({ email, organization, inviter, invitation }) => {
                 const mail = MailService.getInstance();
                 const html = renderInviteEmail({

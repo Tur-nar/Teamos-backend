@@ -6,6 +6,11 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 const mockPrisma = {
     user: {
         findUnique: jest.fn(),
+        update: jest.fn(),
+    },
+    organization: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
     },
     userProfile: {
         findUnique: jest.fn(),
@@ -391,6 +396,82 @@ describe('UserService', () => {
 
             await expect(
                 service.reassignTeam('org-1', 'sup-1', { targetSupervisorId: 'sup-2' }),
+            ).rejects.toThrow(BadRequestException);
+        });
+    });
+
+    // ── completeOnboarding ───────────────────────────────────
+
+    describe('completeOnboarding', () => {
+        it('marks user as onboarded and returns { onboarded: true }', async () => {
+            mockPrisma.user.update.mockResolvedValue({ id: 'user-1', onboarded: true });
+
+            const result = await service.completeOnboarding('user-1');
+
+            expect(mockPrisma.user.update).toHaveBeenCalledWith({
+                where: { id: 'user-1' },
+                data: { onboarded: true },
+            });
+            expect(result).toEqual({ onboarded: true });
+        });
+    });
+
+    // ── updateOrganizationBranding ───────────────────────────
+
+    describe('updateOrganizationBranding', () => {
+        it('updates brandColor successfully when color is changed', async () => {
+            mockPrisma.organization.findUnique.mockResolvedValue({ brandColor: '#000000' });
+            mockPrisma.organization.update.mockResolvedValue({
+                id: 'org-1',
+                brandColor: '#2563EB',
+            });
+
+            const result = await service.updateOrganizationBranding('org-1', {
+                brandColor: '#2563EB',
+            });
+
+            expect(mockPrisma.organization.findUnique).toHaveBeenCalledWith({
+                where: { id: 'org-1' },
+                select: { brandColor: true },
+            });
+            expect(mockPrisma.organization.update).toHaveBeenCalledWith({
+                where: { id: 'org-1' },
+                data: { brandColor: '#2563EB' },
+            });
+            expect(result.brandColor).toBe('#2563EB');
+        });
+
+        it('defaults to empty string when brandColor is null or undefined', async () => {
+            mockPrisma.organization.findUnique.mockResolvedValue({ brandColor: '#2563EB' });
+            mockPrisma.organization.update.mockResolvedValue({
+                id: 'org-1',
+                brandColor: '',
+            });
+
+            const result = await service.updateOrganizationBranding('org-1', {
+                brandColor: null,
+            });
+
+            expect(mockPrisma.organization.update).toHaveBeenCalledWith({
+                where: { id: 'org-1' },
+                data: { brandColor: '' },
+            });
+            expect(result.brandColor).toBe('');
+        });
+
+        it('throws NotFoundException when organization does not exist', async () => {
+            mockPrisma.organization.findUnique.mockResolvedValue(null);
+
+            await expect(
+                service.updateOrganizationBranding('nonexistent-org', { brandColor: '#2563EB' }),
+            ).rejects.toThrow(NotFoundException);
+        });
+
+        it('throws BadRequestException when brandColor is already set to the same color', async () => {
+            mockPrisma.organization.findUnique.mockResolvedValue({ brandColor: '#2563EB' });
+
+            await expect(
+                service.updateOrganizationBranding('org-1', { brandColor: '#2563EB' }),
             ).rejects.toThrow(BadRequestException);
         });
     });

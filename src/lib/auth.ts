@@ -7,6 +7,7 @@ import { organization } from 'better-auth/plugins';
 import { ac, roles } from './auth/permissions';
 import { MailService } from './mail/mail.service';
 import { renderInviteEmail } from './mail/templates/invite.template';
+import { renderVerifyEmail } from './mail/templates/verify-email.template';
 
 const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL!,
@@ -27,6 +28,28 @@ export const auth = betterAuth({
         ) ?? []),
     ].filter(Boolean) as string[],
     emailAndPassword: { enabled: true },
+    emailVerification: {
+        sendOnSignUp: true,
+        autoSignInAfterVerification: true,
+        sendVerificationEmail: async ({ user, token }) => {
+            const mail = MailService.getInstance();
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+            const verifyUrl = `${frontendUrl}/verify-email?token=${token}`;
+            const html = renderVerifyEmail({
+                name: user.name,
+                verifyUrl,
+            });
+            if (mail) {
+                await mail.send({
+                    to: user.email,
+                    subject: `Verify your email address for ${process.env.NEXT_PUBLIC_APP_NAME || 'TeamOS'}`,
+                    html,
+                });
+            } else {
+                console.log(`[AUTH] Verification email for ${user.email}: ${verifyUrl}`);
+            }
+        },
+    },
     user: {
         additionalFields: {
             onboarded: {
